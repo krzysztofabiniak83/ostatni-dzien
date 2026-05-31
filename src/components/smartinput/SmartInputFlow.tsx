@@ -23,6 +23,7 @@ export function SmartInputFlow({ onExit, onToast }: SmartInputFlowProps) {
   const [step, setStep] = useState<Step>('sheet')
   const [mode, setMode] = useState<'ai' | 'manual'>('ai')
   const [draft, setDraft] = useState<NewSubscriptionInput | null>(null)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const stepRef = useRef<Step>('sheet')
   const reduce = useReducedMotion()
@@ -61,10 +62,21 @@ export function SmartInputFlow({ onExit, onToast }: SmartInputFlowProps) {
   }
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const hasFile = e.target.files && e.target.files.length > 0
+    const file = e.target.files?.[0]
     e.target.value = ''
-    if (hasFile) setStep('processing')
+    if (!file) return
+    // Pokażemy realnie wrzucony obraz na ekranie skanowania.
+    setImageUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev)
+      return URL.createObjectURL(file)
+    })
+    setStep('processing')
   }
+
+  // Zwolnij object URL przy odmontowaniu.
+  useEffect(() => () => {
+    if (imageUrl) URL.revokeObjectURL(imageUrl)
+  }, [imageUrl])
 
   const handleSubmit = (d: NewSubscriptionInput) => {
     setDraft(d)
@@ -101,7 +113,7 @@ export function SmartInputFlow({ onExit, onToast }: SmartInputFlowProps) {
             exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.02 }}
             transition={{ duration: reduce ? 0 : 0.32, ease: EASE }}
           >
-            {step === 'processing' && <ProcessingScreen />}
+            {step === 'processing' && <ProcessingScreen imageUrl={imageUrl} />}
             {step === 'form' && (
               <AddForm mode={mode} onBack={onExit} onSubmit={handleSubmit} />
             )}
