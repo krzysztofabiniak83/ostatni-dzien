@@ -8,15 +8,15 @@ interface SubLogoProps {
 }
 
 /** Kolory i font marek — przepisane z prototypu (sekcja .sub-logo.*). */
-const LOGO_STYLES: Record<string, { bg: string; font: 'sans' | 'serif'; weight: string }> = {
-  netflix: { bg: '#E50914', font: 'sans', weight: 'font-bold' },
-  spotify: { bg: '#1DB954', font: 'sans', weight: 'font-bold' },
-  adobe: { bg: '#FA0F00', font: 'sans', weight: 'font-bold' },
-  notion: { bg: '#0D1F1A', font: 'sans', weight: 'font-semibold' },
-  apple: { bg: '#0D1F1A', font: 'sans', weight: 'font-normal' },
-  canva: { bg: '#00C4CC', font: 'sans', weight: 'font-bold' },
-  disney: { bg: '#113CCF', font: 'serif', weight: 'font-normal' },
-  linkedin: { bg: '#0A66C2', font: 'sans', weight: 'font-bold' },
+const LOGO_STYLES: Record<string, { bg: string; font: 'sans' | 'serif'; weight: string; fg: string }> = {
+  netflix: { bg: '#E50914', font: 'sans', weight: 'font-bold', fg: '#fff' },
+  spotify: { bg: '#1DB954', font: 'sans', weight: 'font-bold', fg: '#fff' },
+  adobe: { bg: '#FA0F00', font: 'sans', weight: 'font-bold', fg: '#fff' },
+  notion: { bg: '#0D1F1A', font: 'sans', weight: 'font-semibold', fg: '#fff' },
+  apple: { bg: '#0D1F1A', font: 'sans', weight: 'font-normal', fg: '#fff' },
+  canva: { bg: '#00C4CC', font: 'sans', weight: 'font-bold', fg: '#fff' },
+  disney: { bg: '#113CCF', font: 'serif', weight: 'font-normal', fg: '#fff' },
+  linkedin: { bg: '#0A66C2', font: 'sans', weight: 'font-bold', fg: '#fff' },
 }
 
 const APPLE_PATH =
@@ -27,20 +27,21 @@ export function SubLogo({ logoClass, logoText, size = 'sm' }: SubLogoProps) {
     bg: '#EDEAE3',
     font: 'serif' as const,
     weight: 'font-normal',
+    fg: '#0D1F1A',
   }
   const isLg = size === 'lg'
 
   return (
     <div
       className={clsx(
-        'flex flex-shrink-0 items-center justify-center text-white',
+        'flex flex-shrink-0 items-center justify-center',
         isLg
           ? 'mx-auto mb-5 h-[72px] w-[72px] rounded-[20px] text-[32px] shadow-[0_8px_24px_-8px_rgba(13,31,26,0.15)]'
           : 'h-10 w-10 rounded-[11px] text-[19px]',
         style.font === 'serif' ? 'font-serif' : 'font-sans',
         style.weight,
       )}
-      style={{ backgroundColor: style.bg }}
+      style={{ backgroundColor: style.bg, color: style.fg }}
     >
       {logoClass === 'apple' ? (
         <svg

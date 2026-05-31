@@ -6,6 +6,8 @@ import type { Subscription } from '../../types/subscription'
 interface SubCardProps {
   sub: Subscription
   onClick?: (sub: Subscription) => void
+  /** Podświetlenie świeżo dodanej karty (glow). */
+  highlight?: boolean
 }
 
 function AlertIcon() {
@@ -20,7 +22,7 @@ function AlertIcon() {
  * Karta subskrypcji — 3 kolumny (licznik | info | logo).
  * Warianty: today (gradient + pulsujący badge "Uwaga"), critical (lewy border terracotta).
  */
-export function SubCard({ sub, onClick }: SubCardProps) {
+export function SubCard({ sub, onClick, highlight }: SubCardProps) {
   const isToday = sub.urgency === 'today'
   const isCritical = sub.urgency === 'critical' || isToday
   // Część czasowa daty, np. "Dziś · 23:59" → "23:59".
@@ -35,6 +37,7 @@ export function SubCard({ sub, onClick }: SubCardProps) {
         'transition-all duration-150 hover:border-ink-tertiary active:scale-[0.985]',
         isCritical && 'border-l-[3px] border-l-alert',
         isToday && 'today-card pt-[22px]',
+        highlight && 'new-card',
       )}
       style={
         isToday
