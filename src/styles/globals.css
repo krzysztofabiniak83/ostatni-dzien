@@ -1,0 +1,85 @@
+/* Fonts — Fraunces (display/serif), Geist (UI/sans), Geist Mono (labels) */
+@import '@fontsource/fraunces/300.css';
+@import '@fontsource/fraunces/400.css';
+@import '@fontsource/fraunces/500.css';
+@import '@fontsource/fraunces/300-italic.css';
+@import '@fontsource/fraunces/400-italic.css';
+@import '@fontsource/geist-sans/300.css';
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/500.css';
+@import '@fontsource/geist-sans/600.css';
+@import '@fontsource/geist-sans/700.css';
+@import '@fontsource/geist-mono/400.css';
+@import '@fontsource/geist-mono/500.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Geist', -apple-system, sans-serif;
+  color: var(--ink-primary, #0d1f1a);
+  -webkit-font-smoothing: antialiased;
+  /* Tło sceny wokół ramki telefonu — jak w prototypie */
+  background: #e8e5de;
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(31, 61, 51, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(184, 92, 60, 0.03) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+/* Ukryty scrollbar listy */
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Pulsujący ring badge "Uwaga" (karta today) */
+@keyframes pulse-ring {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 999px;
+  border: 2px solid var(--alert, #b85c3c);
+  opacity: 0;
+  animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-ring::before {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+  }
+}

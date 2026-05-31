@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(which node *)",
+      "Bash(git --version)",
+      "Bash(git config *)",
+      "Bash(brew --version)",
+      "Read(//Users/kfabiniak/**)",
+      "Bash(echo '')",
+      "Bash(echo '# GitHub CLI \\(gh\\) i inne lokalne narzędzia')",
+      "Bash(echo 'export PATH=\"$HOME/.local/bin:$PATH\"')",
+      "Bash(~/.local/bin/gh auth *)"
+    ]
+  }
+}
