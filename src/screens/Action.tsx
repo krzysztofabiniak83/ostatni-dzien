@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import clsx from 'clsx'
+import { Bell, BellOff, Pencil, Trash2 } from 'lucide-react'
 import { StatusBar } from '../components/layout/StatusBar'
 import { SubLogo } from '../components/cards/SubLogo'
 import { Tag } from '../components/ui/Tag'
@@ -27,6 +28,25 @@ function DocIcon() {
   )
 }
 
+/** Przełącznik on/off — zielony gdy włączony. */
+function Toggle({ on }: { on: boolean }) {
+  return (
+    <span
+      className={clsx(
+        'relative inline-flex h-[22px] w-[38px] flex-shrink-0 items-center rounded-pill transition-colors duration-200',
+        on ? 'bg-accent' : 'bg-hairline',
+      )}
+    >
+      <span
+        className={clsx(
+          'absolute h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform duration-200',
+          on ? 'translate-x-[18px]' : 'translate-x-[2px]',
+        )}
+      />
+    </span>
+  )
+}
+
 export function Action() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -36,6 +56,7 @@ export function Action() {
   const [showDelete, setShowDelete] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [muted, setMuted] = useState(false)
 
   // Subskrypcja usunięta/nieznana → wróć na dashboard.
   if (!sub) {
@@ -169,24 +190,41 @@ export function Action() {
         {/* Akcje drugorzędne */}
         <div className="flex flex-col overflow-hidden rounded-lg border border-hairline bg-bg-card">
           <button
-            onClick={() => flashToast('Powiadomienia wyciszone')}
+            onClick={() => {
+              const next = !muted
+              setMuted(next)
+              flashToast(next ? 'Powiadomienia wyciszone' : 'Powiadomienia włączone')
+            }}
             className="flex w-full items-center justify-between border-b border-hairline px-5 py-4 text-left text-[14px] text-ink-primary transition-colors hover:bg-bg-subtle"
           >
-            <span>Wycisz powiadomienia</span>
-            <span className="text-[16px] text-ink-tertiary">›</span>
+            <span className="flex items-center gap-3">
+              {muted ? (
+                <BellOff className="h-[18px] w-[18px] text-ink-tertiary" strokeWidth={1.6} />
+              ) : (
+                <Bell className="h-[18px] w-[18px] text-ink-secondary" strokeWidth={1.6} />
+              )}
+              Wycisz powiadomienia
+            </span>
+            <Toggle on={muted} />
           </button>
           <button
             onClick={() => flashToast('Edycja danych — wkrótce')}
             className="flex w-full items-center justify-between border-b border-hairline px-5 py-4 text-left text-[14px] text-ink-primary transition-colors hover:bg-bg-subtle"
           >
-            <span>Edytuj dane subskrypcji</span>
+            <span className="flex items-center gap-3">
+              <Pencil className="h-[18px] w-[18px] text-ink-secondary" strokeWidth={1.6} />
+              Edytuj dane subskrypcji
+            </span>
             <span className="text-[16px] text-ink-tertiary">›</span>
           </button>
           <button
             onClick={() => setShowDelete(true)}
             className="flex w-full items-center justify-between px-5 py-4 text-left text-[14px] text-alert transition-colors hover:bg-bg-subtle"
           >
-            <span>Usuń z listy</span>
+            <span className="flex items-center gap-3">
+              <Trash2 className="h-[18px] w-[18px]" strokeWidth={1.6} />
+              Usuń z listy
+            </span>
             <span className="text-[16px] text-ink-tertiary">›</span>
           </button>
         </div>
