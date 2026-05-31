@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { SubCard } from '../components/cards/SubCard'
 import { SectionDivider } from '../components/layout/SectionDivider'
 import { StatusBar } from '../components/layout/StatusBar'
@@ -27,13 +28,13 @@ function IconButton({ children, label }: { children: ReactNode; label: string })
 
 export function Dashboard() {
   const subscriptions = useSubscriptions((s) => s.subscriptions)
+  const navigate = useNavigate()
 
   const bySection = (key: Section): Subscription[] =>
     subscriptions.filter((s) => s.section === key)
 
   const handleCardClick = (sub: Subscription) => {
-    // Ekran akcji podepniemy w Fazie 2.
-    console.log('→ ekran akcji (Faza 2):', sub.name)
+    navigate(`/sub/${sub.id}`)
   }
 
   return (
