@@ -17,15 +17,22 @@ type BrandIcon = { path: string }
  * znaku — używamy więc typograficznego wordmarku na kolorze marki.
  */
 type Style = {
-  bg: string
+  bg?: string
+  /** CSS gradient — używany zamiast `bg` jeśli podany. */
+  bgGradient?: string
   fg: string
   /** Jeśli podany — używamy autentycznego logo z simple-icons. */
   icon?: BrandIcon
+  /** Surowy path SVG (viewBox 0 0 24 24) — własne logo (np. Adobe A). */
+  customPath?: string
   /** Dla wordmarków: font Geist sans (true) lub Fraunces serif (false). */
   sans?: boolean
   weight?: string
-  /** Override rozmiaru tekstu dla wordmarku (sm). */
+  italic?: boolean
+  /** Override rozmiaru tekstu dla wordmarku (sm/lg). */
   sizeOverride?: { sm?: string; lg?: string }
+  /** Override tekstu wordmarku (zamiast `logoText` z propsów). */
+  textOverride?: string
 }
 
 const STYLES: Record<string, Style> = {
@@ -35,10 +42,30 @@ const STYLES: Record<string, Style> = {
   apple: { bg: '#0D1F1A', fg: '#fff', icon: siApple },
   icloud: { bg: '#FFFFFF', fg: '#0D1F1A', icon: siIcloud },
 
-  // Wordmarki — brandy spoza simple-icons
-  adobe: { bg: '#FA0F00', fg: '#fff', sans: true, weight: 'font-bold' },
-  canva: { bg: '#00C4CC', fg: '#fff', sans: true, weight: 'font-bold' },
-  disney: { bg: '#113CCF', fg: '#fff', sans: false, weight: 'font-normal' },
+  // Brandy spoza simple-icons — własne SVG / wordmarki na kolorach marki.
+  // Adobe — chunky corporate "A" mark (bez crossbara, z trójkątnym wcięciem u góry).
+  adobe: {
+    bg: '#FA0F00',
+    fg: '#fff',
+    customPath: 'M2.5 21 L12 3 L21.5 21 L15.5 21 L12 14 L8.5 21 Z',
+  },
+  // Canva — gradient turkus→fiolet + italic "C" w Fraunces.
+  canva: {
+    bgGradient: 'linear-gradient(135deg, #00C4CC 0%, #7B61FF 100%)',
+    fg: '#fff',
+    italic: true,
+    weight: 'font-normal',
+    sizeOverride: { sm: 'text-[22px]', lg: 'text-[40px]' },
+  },
+  // Disney+ — gradient granat→błękit + italic "D+" w Fraunces.
+  disney: {
+    bgGradient: 'linear-gradient(180deg, #0D1B5A 0%, #1FA0DA 100%)',
+    fg: '#fff',
+    italic: true,
+    weight: 'font-normal',
+    textOverride: 'D+',
+    sizeOverride: { sm: 'text-[16px]', lg: 'text-[28px]' },
+  },
   linkedin: {
     bg: '#0A66C2',
     fg: '#fff',
@@ -56,9 +83,11 @@ export function SubLogo({ logoClass, logoText, size = 'sm' }: SubLogoProps) {
     weight: 'font-normal',
   }
   const isLg = size === 'lg'
-  // Rozmiar autentycznej ikony — nieco mniejszy niż kafelek dla padding optycznego.
+  // Rozmiar SVG — nieco mniejszy niż kafelek dla padding optycznego.
   const iconSize = isLg ? 40 : 22
+  const customSize = isLg ? 44 : 24
   const textSize = style.sizeOverride?.[size] ?? (isLg ? 'text-[32px]' : 'text-[19px]')
+  const isTextual = !style.icon && !style.customPath
 
   return (
     <div
@@ -67,12 +96,13 @@ export function SubLogo({ logoClass, logoText, size = 'sm' }: SubLogoProps) {
         isLg
           ? 'mx-auto mb-5 h-[72px] w-[72px] rounded-[20px] shadow-[0_8px_24px_-8px_rgba(13,31,26,0.15)]'
           : 'h-10 w-10 rounded-[11px]',
-        !style.icon && (style.sans ? 'font-sans' : 'font-serif'),
-        !style.icon && (style.weight ?? 'font-normal'),
-        !style.icon && textSize,
+        isTextual && (style.sans ? 'font-sans' : 'font-serif'),
+        isTextual && (style.weight ?? 'font-normal'),
+        isTextual && style.italic && 'italic',
+        isTextual && textSize,
       )}
       style={{
-        backgroundColor: style.bg,
+        background: style.bgGradient ?? style.bg,
         color: style.fg,
         // Subtelny outline gdy tło jest białe (Notion / iCloud), żeby kafelek nie znikał na bg-card.
         boxShadow:
@@ -82,17 +112,15 @@ export function SubLogo({ logoClass, logoText, size = 'sm' }: SubLogoProps) {
       }}
     >
       {style.icon ? (
-        <svg
-          width={iconSize}
-          height={iconSize}
-          viewBox="0 0 24 24"
-          fill={style.fg}
-          aria-hidden="true"
-        >
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill={style.fg} aria-hidden="true">
           <path d={style.icon.path} />
         </svg>
+      ) : style.customPath ? (
+        <svg width={customSize} height={customSize} viewBox="0 0 24 24" fill={style.fg} aria-hidden="true">
+          <path d={style.customPath} />
+        </svg>
       ) : (
-        logoText
+        style.textOverride ?? logoText
       )}
     </div>
   )
