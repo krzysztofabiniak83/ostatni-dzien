@@ -25,9 +25,6 @@ export function PhoneFrame({ children, label, caption }: PhoneFrameProps) {
         )}
 
         <div className="phone-shell relative flex h-full w-full flex-col bg-bg-base md:h-[844px] md:w-[390px] md:rounded-[56px] md:bg-ink-primary md:p-3">
-          {/* Notch — tylko w trybie sceny */}
-          <div className="pointer-events-none absolute left-1/2 top-3 z-[100] hidden h-8 w-[120px] -translate-x-1/2 rounded-[20px] bg-ink-primary md:block" />
-
           <div
             className="screen relative flex h-full w-full flex-col overflow-hidden bg-bg-base md:rounded-[44px]"
             style={{
