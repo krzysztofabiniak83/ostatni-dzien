@@ -44,13 +44,11 @@ function App() {
   return (
     <BrowserRouter>
       <PhoneFrame
-        label="Faza 4 · Onboarding"
+        label="Ostatni Dzień · MVP"
         caption={
           <>
-            Kliknij <strong className="font-medium text-ink-primary">+</strong> — dodaj subskrypcję
-            (screenshot → fake OCR → formularz).
-            <br />
-            Kliknij kartę — zobaczysz <strong className="font-medium text-ink-primary">ekran akcji</strong>.
+            Prototyp przeglądarkowy. Wrzuć screenshot albo dodaj subskrypcję ręcznie — przypomnimy Ci o pobraniu
+            zanim się zorientujesz.
           </>
         }
       >
