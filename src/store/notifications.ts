@@ -15,6 +15,8 @@ export interface Notification {
   logoText?: string
   /** Systemowy glyph zamiast logo (np. 'check' dla potwierdzeń). */
   iconSystem?: 'check' | 'trash'
+  /** Id subskrypcji — jeśli ustawione, klik w powiadomienie nawiguje do /sub/:id. */
+  subId?: string
   createdAt: number
   read: boolean
   /** Klucz deduplikacji — np. `critical:adobe:0`. Nie pushujemy ponownie tego samego. */

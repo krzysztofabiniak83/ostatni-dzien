@@ -36,6 +36,7 @@ export const useSubscriptions = create<SubscriptionsState>()(
         const sub = get().subscriptions.find((s) => s.id === id)
         set((state) => ({ subscriptions: state.subscriptions.filter((s) => s.id !== id) }))
         if (sub) {
+          // Brak subId — usunięcie znaczy że już nie ma do czego nawigować.
           useNotifications.getState().push({
             type: 'info',
             iconSystem: 'trash',
@@ -76,6 +77,7 @@ export const useSubscriptions = create<SubscriptionsState>()(
           subtitle: isTrial
             ? `Pierwsza opłata ${amount} po próbie. Przypomnimy zanim pobiorą środki.`
             : `Pobranie ${amount}. Przypomnimy zanim pobiorą środki.`,
+          subId: id,
         })
         return id
       },

@@ -44,7 +44,7 @@ function IconButton({
       {badge && (
         <span
           aria-label="Nowe powiadomienia"
-          className="absolute right-[5px] top-[5px] h-[8px] w-[8px] rounded-full bg-alert ring-2 ring-bg-card"
+          className="badge-pulse absolute right-[5px] top-[5px] h-[8px] w-[8px] rounded-full bg-alert ring-2 ring-bg-card"
         />
       )}
     </button>
@@ -84,7 +84,8 @@ export function Dashboard() {
   const [adding, setAdding] = useState(initialAdding)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const unreadCount = useNotifications((s) => s.items.filter((it) => !it.read).length)
+  // Badge sygnalizuje świeże powiadomienie (tylko najnowsze decyduje, zgodnie z hierarchią listy).
+  const hasFreshNotification = useNotifications((s) => Boolean(s.items[0] && !s.items[0].read))
   const [toast, setToast] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -122,7 +123,7 @@ export function Dashboard() {
             <IconButton
               label="Powiadomienia"
               onClick={() => setNotificationsOpen(true)}
-              badge={unreadCount > 0}
+              badge={hasFreshNotification}
             >
               <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="#0D1F1A" strokeWidth={1.6}>
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />

@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
 import clsx from 'clsx'
 import { BellOff, Check, Trash2 } from 'lucide-react'
 import { SubLogo } from '../cards/SubLogo'
 import { useNotifications, type Notification } from '../../store/notifications'
+import { useSubscriptions } from '../../store/subscriptions'
 import { formatRelativeTime } from '../../utils/notifications'
 
 interface NotificationsSheetProps {
@@ -26,16 +28,20 @@ function SystemIcon({ system }: { system: NonNullable<Notification['iconSystem']
   )
 }
 
-function Row({ item }: { item: Notification }) {
-  return (
-    <div
-      className={clsx(
-        'relative flex gap-3 px-5 py-4 transition-colors',
-        !item.read && 'bg-accent-soft/30',
-      )}
-    >
-      {/* Lewy znacznik nieprzeczytanego — drobna terakotowa kropka dla krytycznego */}
-      {!item.read && item.type === 'critical' && (
+interface RowProps {
+  item: Notification
+  /** Tylko najnowsze nieprzeczytane dostaje pełny styl "fresh"; reszta — stonowana. */
+  fresh: boolean
+  onClick?: () => void
+}
+
+function Row({ item, fresh, onClick }: RowProps) {
+  const clickable = !!onClick
+
+  const inner = (
+    <>
+      {/* Lewy znacznik świeżego — drobna terakotowa kropka dla critical */}
+      {fresh && item.type === 'critical' && (
         <span className="absolute left-2 top-1/2 h-[6px] w-[6px] -translate-y-1/2 rounded-full bg-alert" />
       )}
 
@@ -50,24 +56,57 @@ function Row({ item }: { item: Notification }) {
       <div className="min-w-0 flex-1">
         <div
           className={clsx(
-            'text-[14px] leading-snug tracking-[-0.005em] text-ink-primary',
-            !item.read && 'font-medium',
+            'leading-snug tracking-[-0.005em]',
+            fresh
+              ? 'text-[14px] font-medium text-ink-primary'
+              : 'text-[13px] font-normal text-ink-secondary',
           )}
         >
           {item.title}
         </div>
-        <div className="mt-[2px] text-[12px] leading-relaxed text-ink-secondary">{item.subtitle}</div>
+        <div
+          className={clsx(
+            'mt-[2px] leading-relaxed',
+            fresh ? 'text-[12px] text-ink-secondary' : 'text-[11px] text-ink-tertiary',
+          )}
+        >
+          {item.subtitle}
+        </div>
         <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.12em] text-ink-tertiary">
           {formatRelativeTime(item.createdAt)}
         </div>
       </div>
-    </div>
+
+      {clickable && (
+        <span className="self-center text-[16px] text-ink-tertiary" aria-hidden="true">
+          ›
+        </span>
+      )}
+    </>
   )
+
+  const className = clsx(
+    'relative flex gap-3 px-5 py-4 text-left transition-colors',
+    fresh && 'bg-accent-soft/30',
+    clickable && 'cursor-pointer hover:bg-bg-subtle/80 active:scale-[0.995]',
+  )
+
+  if (clickable) {
+    return (
+      <button type="button" onClick={onClick} className={clsx('w-full', className)}>
+        {inner}
+      </button>
+    )
+  }
+
+  return <div className={className}>{inner}</div>
 }
 
 export function NotificationsSheet({ open, onClose }: NotificationsSheetProps) {
   const items = useNotifications((s) => s.items)
   const markAllRead = useNotifications((s) => s.markAllRead)
+  const subscriptions = useSubscriptions((s) => s.subscriptions)
+  const navigate = useNavigate()
 
   // Otwarcie listy = przeczytane wszystko (zgodnie z briefem: minimalizujemy tarcie).
   useEffect(() => {
@@ -77,6 +116,11 @@ export function NotificationsSheet({ open, onClose }: NotificationsSheetProps) {
       return () => window.clearTimeout(t)
     }
   }, [open, markAllRead])
+
+  const handleOpen = (subId: string) => {
+    onClose()
+    navigate(`/sub/${subId}`)
+  }
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 80) onClose()
@@ -139,9 +183,23 @@ export function NotificationsSheet({ open, onClose }: NotificationsSheetProps) {
                 </div>
               ) : (
                 <div className="flex flex-col divide-y divide-hairline/70">
-                  {items.map((item) => (
-                    <Row key={item.id} item={item} />
-                  ))}
+                  {items.map((item, idx) => {
+                    // Tylko najnowsze nieprzeczytane dostaje pełen styl "fresh".
+                    const fresh = idx === 0 && !item.read
+                    // Klikalne tylko gdy subId jest podane i subskrypcja jeszcze istnieje
+                    // (po usunięciu nie ma do czego nawigować).
+                    const subExists = item.subId
+                      ? subscriptions.some((s) => s.id === item.subId)
+                      : false
+                    return (
+                      <Row
+                        key={item.id}
+                        item={item}
+                        fresh={fresh}
+                        onClick={subExists && item.subId ? () => handleOpen(item.subId!) : undefined}
+                      />
+                    )
+                  })}
                 </div>
               )}
             </div>
