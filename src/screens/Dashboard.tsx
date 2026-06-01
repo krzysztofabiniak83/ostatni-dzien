@@ -1,8 +1,10 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SubCard } from '../components/cards/SubCard'
 import { SectionDivider } from '../components/layout/SectionDivider'
 import { StatusBar } from '../components/layout/StatusBar'
+import { Toast } from '../components/ui/Toast'
+import { SmartInputFlow } from '../components/smartinput/SmartInputFlow'
 import { useSubscriptions } from '../store/subscriptions'
 import type { Section, Subscription } from '../types/subscription'
 
@@ -28,7 +30,13 @@ function IconButton({ children, label }: { children: ReactNode; label: string })
 
 export function Dashboard() {
   const subscriptions = useSubscriptions((s) => s.subscriptions)
+  const lastAddedId = useSubscriptions((s) => s.lastAddedId)
+  const clearLastAdded = useSubscriptions((s) => s.clearLastAdded)
   const navigate = useNavigate()
+
+  const [adding, setAdding] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const bySection = (key: Section): Subscription[] =>
     subscriptions.filter((s) => s.section === key)
@@ -36,6 +44,19 @@ export function Dashboard() {
   const handleCardClick = (sub: Subscription) => {
     navigate(`/sub/${sub.id}`)
   }
+
+  const flashToast = (msg: string) => {
+    setToast(msg)
+    window.setTimeout(() => setToast(null), 2400)
+  }
+
+  // Po dodaniu subskrypcji: przewiń listę na górę i wygaś highlight.
+  useEffect(() => {
+    if (!lastAddedId) return
+    listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    const t = window.setTimeout(() => clearLastAdded(), 2200)
+    return () => window.clearTimeout(t)
+  }, [lastAddedId, clearLastAdded])
 
   return (
     <>
@@ -76,7 +97,7 @@ export function Dashboard() {
       </div>
 
       {/* Scrollowalna lista sekcji */}
-      <div className="no-scrollbar relative flex-1 overflow-y-auto px-6 pb-[120px]">
+      <div ref={listRef} className="no-scrollbar relative flex-1 overflow-y-auto px-6 pb-[120px]">
         {SECTIONS.map((section, idx) => {
           const items = bySection(section.key)
           if (items.length === 0) return null
@@ -85,7 +106,12 @@ export function Dashboard() {
               <SectionDivider label={section.label} className={idx === 0 ? 'mb-3' : 'mb-3 mt-7'} />
               <div className="flex flex-col gap-[10px]">
                 {items.map((sub) => (
-                  <SubCard key={sub.id} sub={sub} onClick={handleCardClick} />
+                  <SubCard
+                    key={sub.id}
+                    sub={sub}
+                    onClick={handleCardClick}
+                    highlight={sub.id === lastAddedId}
+                  />
                 ))}
               </div>
             </div>
@@ -99,9 +125,10 @@ export function Dashboard() {
         style={{ background: 'linear-gradient(to top, #F5F3EE 30%, transparent)' }}
       />
 
-      {/* FAB (bez akcji w Fazie 1) */}
+      {/* FAB — otwiera Smart Input */}
       <button
         aria-label="Dodaj subskrypcję"
+        onClick={() => setAdding(true)}
         className="absolute bottom-8 right-6 z-50 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-accent text-bg-base transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent-hover active:scale-[0.94]"
         style={{ boxShadow: '0 12px 28px -8px rgba(31,61,51,0.5), 0 4px 12px -4px rgba(31,61,51,0.3)' }}
       >
@@ -109,6 +136,10 @@ export function Dashboard() {
           <path d="M12 5v14M5 12h14" />
         </svg>
       </button>
+
+      {adding && <SmartInputFlow onExit={() => setAdding(false)} onToast={flashToast} />}
+
+      <Toast message={toast} />
     </>
   )
 }

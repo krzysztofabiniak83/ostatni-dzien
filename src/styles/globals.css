@@ -73,9 +73,125 @@ body {
   animation: pulse-ring 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* ===== Smart Input (Faza 3) ===== */
+
+/* Skanująca linia po fake screenshocie */
+.scan-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 80px;
+  background: linear-gradient(
+    180deg,
+    rgba(31, 61, 51, 0) 0%,
+    rgba(31, 61, 51, 0.08) 40%,
+    rgba(31, 61, 51, 0.18) 70%,
+    rgba(31, 61, 51, 0.05) 90%,
+    rgba(31, 61, 51, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 10;
+  animation: scan-move 1.8s ease-in-out infinite;
+}
+.scan-line::after {
+  content: '';
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent 0%, var(--accent, #1f3d33) 50%, transparent 100%);
+  box-shadow: 0 0 16px 2px var(--accent, #1f3d33), 0 0 32px 4px rgba(31, 61, 51, 0.4);
+}
+@keyframes scan-move {
+  0% { top: -80px; }
+  100% { top: 100%; }
+}
+
+/* Glow wokół fake screenshota podczas skanowania */
+.scanning-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(31, 61, 51, 0.4), rgba(31, 61, 51, 0.1), rgba(31, 61, 51, 0.4));
+  z-index: -1;
+  filter: blur(8px);
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Animowane kropki "..." */
+.processing-dots::after {
+  content: '';
+  animation: dots 1.4s steps(4, end) infinite;
+}
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75%, 100% { content: '...'; }
+}
+
+/* Sukces — pop koła, rysowanie checka, rozszerzający się ring, fade-up */
+.success-circle {
+  animation: success-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes success-pop {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+.success-check path {
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: draw-check 0.4s ease-out 0.3s forwards;
+}
+@keyframes draw-check {
+  to { stroke-dashoffset: 0; }
+}
+.success-ring {
+  animation: success-ring 1s ease-out 0.2s forwards;
+}
+@keyframes success-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+.success-fade {
+  opacity: 0;
+  animation: success-fade-up 0.5s ease-out forwards;
+}
+@keyframes success-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Highlight nowo dodanej karty na dashboardzie */
+.new-card {
+  animation: new-card-glow 2s ease-out;
+}
+@keyframes new-card-glow {
+  0% { box-shadow: 0 0 0 0 rgba(31, 61, 51, 0.4); border-color: var(--accent, #1f3d33); }
+  100% { box-shadow: 0 0 0 12px rgba(31, 61, 51, 0); border-color: var(--hairline, #e0ddd5); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .pulse-ring::before {
+  .pulse-ring::before,
+  .scan-line,
+  .scanning-glow::before,
+  .processing-dots::after,
+  .success-circle,
+  .success-check path,
+  .success-ring,
+  .success-fade,
+  .new-card {
     animation: none;
+  }
+  .success-fade {
+    opacity: 1;
   }
   *,
   *::before,

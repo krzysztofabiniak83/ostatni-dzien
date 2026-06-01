@@ -10,7 +10,9 @@ Roadmap projektu. Aktualizuj sekcję "Status" po każdej fazie.
 - ✅ **Faza 1 (prototyp)** — Dashboard MVP (klikalny HTML)
 - ✅ **Faza 2 (prototyp)** — Ekran Akcji (klikalny HTML)
 - ✅ **Faza 3 (prototyp)** — Smart Input flow (klikalny HTML)
-- ⏳ **Faza 1 (React)** — **TU JESTEŚMY** — przepisanie prototypów do prawdziwego projektu
+- ✅ **Faza 1 (React)** — Setup Vite + Dashboard z mock data
+- ✅ **Faza 2 (React)** — Ekran Akcji + routing + przejścia fade+scale
+- ⏳ **Faza 3 (React)** — **TU JESTEŚMY** — Smart Input (sheet → fake OCR → formularz → sukces, localStorage)
 - ⏸️ Faza 4 — Onboarding
 - ⏸️ Faza 5 — Spięcie w pełen prototyp + deploy
 - ⏸️ Walidacja z użytkownikami

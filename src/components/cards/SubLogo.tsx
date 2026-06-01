@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { siApple, siIcloud, siNetflix, siNotion, siSpotify } from 'simple-icons'
 
 interface SubLogoProps {
   logoClass: string
@@ -7,52 +8,119 @@ interface SubLogoProps {
   size?: 'sm' | 'lg'
 }
 
-/** Kolory i font marek — przepisane z prototypu (sekcja .sub-logo.*). */
-const LOGO_STYLES: Record<string, { bg: string; font: 'sans' | 'serif'; weight: string }> = {
-  netflix: { bg: '#E50914', font: 'sans', weight: 'font-bold' },
-  spotify: { bg: '#1DB954', font: 'sans', weight: 'font-bold' },
-  adobe: { bg: '#FA0F00', font: 'sans', weight: 'font-bold' },
-  notion: { bg: '#0D1F1A', font: 'sans', weight: 'font-semibold' },
-  apple: { bg: '#0D1F1A', font: 'sans', weight: 'font-normal' },
-  canva: { bg: '#00C4CC', font: 'sans', weight: 'font-bold' },
-  disney: { bg: '#113CCF', font: 'serif', weight: 'font-normal' },
-  linkedin: { bg: '#0A66C2', font: 'sans', weight: 'font-bold' },
+type BrandIcon = { path: string }
+
+/**
+ * Konfiguracja per marka. Dla brandów obecnych w simple-icons (Netflix, Spotify,
+ * Notion, Apple/iCloud) renderujemy autentyczny wektor SVG. Pozostałe (Adobe,
+ * Canva, Disney+, LinkedIn) zostały usunięte z simple-icons na wniosek właścicieli
+ * znaku — używamy więc typograficznego wordmarku na kolorze marki.
+ */
+type Style = {
+  bg?: string
+  /** CSS gradient — używany zamiast `bg` jeśli podany. */
+  bgGradient?: string
+  fg: string
+  /** Jeśli podany — używamy autentycznego logo z simple-icons. */
+  icon?: BrandIcon
+  /** Surowy path SVG (viewBox 0 0 24 24) — własne logo (np. Adobe A). */
+  customPath?: string
+  /** Dla wordmarków: font Geist sans (true) lub Fraunces serif (false). */
+  sans?: boolean
+  weight?: string
+  italic?: boolean
+  /** Override rozmiaru tekstu dla wordmarku (sm/lg). */
+  sizeOverride?: { sm?: string; lg?: string }
+  /** Override tekstu wordmarku (zamiast `logoText` z propsów). */
+  textOverride?: string
 }
 
-const APPLE_PATH =
-  'M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z'
+const STYLES: Record<string, Style> = {
+  netflix: { bg: '#E50914', fg: '#fff', icon: siNetflix },
+  spotify: { bg: '#1DB954', fg: '#fff', icon: siSpotify },
+  notion: { bg: '#FFFFFF', fg: '#0D1F1A', icon: siNotion },
+  apple: { bg: '#0D1F1A', fg: '#fff', icon: siApple },
+  icloud: { bg: '#FFFFFF', fg: '#0D1F1A', icon: siIcloud },
+
+  // Brandy spoza simple-icons — własne SVG / wordmarki na kolorach marki.
+  // Adobe — chunky corporate "A" mark (bez crossbara, z trójkątnym wcięciem u góry).
+  adobe: {
+    bg: '#FA0F00',
+    fg: '#fff',
+    customPath: 'M2.5 21 L12 3 L21.5 21 L15.5 21 L12 14 L8.5 21 Z',
+  },
+  // Canva — gradient turkus→fiolet + italic "C" w Fraunces.
+  canva: {
+    bgGradient: 'linear-gradient(135deg, #00C4CC 0%, #7B61FF 100%)',
+    fg: '#fff',
+    italic: true,
+    weight: 'font-normal',
+    sizeOverride: { sm: 'text-[22px]', lg: 'text-[40px]' },
+  },
+  // Disney+ — gradient granat→błękit + italic "D+" w Fraunces.
+  disney: {
+    bgGradient: 'linear-gradient(180deg, #0D1B5A 0%, #1FA0DA 100%)',
+    fg: '#fff',
+    italic: true,
+    weight: 'font-normal',
+    textOverride: 'D+',
+    sizeOverride: { sm: 'text-[16px]', lg: 'text-[28px]' },
+  },
+  linkedin: {
+    bg: '#0A66C2',
+    fg: '#fff',
+    sans: true,
+    weight: 'font-bold',
+    sizeOverride: { sm: 'text-[15px]', lg: 'text-[26px]' },
+  },
+}
 
 export function SubLogo({ logoClass, logoText, size = 'sm' }: SubLogoProps) {
-  const style = LOGO_STYLES[logoClass] ?? {
+  const style = STYLES[logoClass] ?? {
     bg: '#EDEAE3',
-    font: 'serif' as const,
+    fg: '#0D1F1A',
+    sans: false,
     weight: 'font-normal',
   }
   const isLg = size === 'lg'
+  // Rozmiar SVG — nieco mniejszy niż kafelek dla padding optycznego.
+  const iconSize = isLg ? 40 : 22
+  const customSize = isLg ? 44 : 24
+  const textSize = style.sizeOverride?.[size] ?? (isLg ? 'text-[32px]' : 'text-[19px]')
+  const isTextual = !style.icon && !style.customPath
 
   return (
     <div
       className={clsx(
-        'flex flex-shrink-0 items-center justify-center text-white',
+        'flex flex-shrink-0 items-center justify-center',
         isLg
-          ? 'mx-auto mb-5 h-[72px] w-[72px] rounded-[20px] text-[32px] shadow-[0_8px_24px_-8px_rgba(13,31,26,0.15)]'
-          : 'h-10 w-10 rounded-[11px] text-[19px]',
-        style.font === 'serif' ? 'font-serif' : 'font-sans',
-        style.weight,
+          ? 'mx-auto mb-5 h-[72px] w-[72px] rounded-[20px] shadow-[0_8px_24px_-8px_rgba(13,31,26,0.15)]'
+          : 'h-10 w-10 rounded-[11px]',
+        isTextual && (style.sans ? 'font-sans' : 'font-serif'),
+        isTextual && (style.weight ?? 'font-normal'),
+        isTextual && style.italic && 'italic',
+        isTextual && textSize,
       )}
-      style={{ backgroundColor: style.bg }}
+      style={{
+        background: style.bgGradient ?? style.bg,
+        color: style.fg,
+        // Subtelny outline gdy tło jest białe (Notion / iCloud), żeby kafelek nie znikał na bg-card.
+        boxShadow:
+          style.bg === '#FFFFFF' && !isLg
+            ? 'inset 0 0 0 1px rgba(13,31,26,0.08)'
+            : undefined,
+      }}
     >
-      {logoClass === 'apple' ? (
-        <svg
-          width={isLg ? 36 : 20}
-          height={isLg ? 36 : 20}
-          viewBox="0 0 24 24"
-          fill="currentColor"
-        >
-          <path d={APPLE_PATH} />
+      {style.icon ? (
+        <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill={style.fg} aria-hidden="true">
+          <path d={style.icon.path} />
+        </svg>
+      ) : style.customPath ? (
+        <svg width={customSize} height={customSize} viewBox="0 0 24 24" fill={style.fg} aria-hidden="true">
+          <path d={style.customPath} />
         </svg>
       ) : (
-        logoText
+        style.textOverride ?? logoText
       )}
     </div>
   )

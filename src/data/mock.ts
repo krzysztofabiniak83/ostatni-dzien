@@ -104,7 +104,7 @@ export const MOCK_SUBSCRIPTIONS: Subscription[] = [
   {
     id: 'icloud',
     name: 'iCloud+ 200GB',
-    logoClass: 'apple',
+    logoClass: 'icloud',
     logoText: '',
     daysUntil: 23,
     date: '23 czerwca · 9:00',

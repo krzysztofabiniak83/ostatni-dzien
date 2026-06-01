@@ -34,13 +34,13 @@ function App() {
   return (
     <BrowserRouter>
       <PhoneFrame
-        label="Faza 2 · Ekran akcji"
+        label="Faza 3 · Smart Input"
         caption={
           <>
-            Kliknij kartę — zobaczysz <strong className="font-medium text-ink-primary">ekran akcji</strong>.
+            Kliknij <strong className="font-medium text-ink-primary">+</strong> — dodaj subskrypcję
+            (screenshot → fake OCR → formularz).
             <br />
-            Karta „Adobe Dziś" pokazuje wariant{' '}
-            <strong className="font-medium text-ink-primary">krytyczny</strong>, reszta — normalny.
+            Kliknij kartę — zobaczysz <strong className="font-medium text-ink-primary">ekran akcji</strong>.
           </>
         }
       >
