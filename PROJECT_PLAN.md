@@ -12,8 +12,8 @@ Roadmap projektu. Aktualizuj sekcję "Status" po każdej fazie.
 - ✅ **Faza 3 (prototyp)** — Smart Input flow (klikalny HTML)
 - ✅ **Faza 1 (React)** — Setup Vite + Dashboard z mock data
 - ✅ **Faza 2 (React)** — Ekran Akcji + routing + przejścia fade+scale
-- ⏳ **Faza 3 (React)** — **TU JESTEŚMY** — Smart Input (sheet → fake OCR → formularz → sukces, localStorage)
-- ⏸️ Faza 4 — Onboarding
+- ✅ **Faza 3 (React)** — Smart Input (sheet → fake OCR → formularz → sukces, localStorage)
+- ⏳ **Faza 4 (React)** — **TU JESTEŚMY** — Onboarding (3 slajdy + dots + swipe, flaga onboardingDone)
 - ⏸️ Faza 5 — Spięcie w pełen prototyp + deploy
 - ⏸️ Walidacja z użytkownikami
 - ⏸️ Roadmapa post-MVP

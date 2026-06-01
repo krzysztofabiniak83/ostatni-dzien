@@ -1,6 +1,11 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # CLAUDE.md — Ostatni Dzień
 
 Ten plik daje Ci pełny kontekst projektu. Przeczytaj go w całości przed pierwszą akcją.
+**Sekcje 1–9 = brief produktowy/designerski (decyzje). Sekcja 10 = referencja kodu** (architektura, komendy, konwencje) — tam najszybciej zorientujesz się w istniejącej bazie React.
 
 ---
 
@@ -183,3 +188,103 @@ Gdy user otworzy nową sesję, Twoje pierwsze akcje:
 ---
 
 *Ten plik jest source of truth. Aktualizuj go gdy podejmujemy nowe decyzje produktowe/designerskie.*
+
+---
+
+## 10. Architektura kodu i komendy (Claude Code reference)
+
+Sekcje 1–9 to brief. Ta sekcja to to, co musisz wiedzieć **o samej bazie React**, żeby od razu być produktywny.
+
+### 10.1 Środowisko i komendy
+
+Node trzymamy w **nvm** (nie ma go w `PATH` od razu po starcie sesji). W każdym wywołaniu `Bash` najpierw:
+```bash
+export NVM_DIR="$HOME/.nvm"; \. "$NVM_DIR/nvm.sh"
+```
+Potem standardowo:
+- `npm run dev` — Vite dev server na **:5173** (`.claude/launch.json` używa absolutnej ścieżki do node z nvm, żeby preview działał)
+- `npm run build` — produkcyjny build
+- `npx tsc --noEmit` — typecheck (uruchamiaj po każdej większej zmianie, build sprawdza to samo)
+- `npm run lint` — ESLint (Vite default config)
+
+Brak skonfigurowanych testów — projekt na razie weryfikujemy wizualnie przez preview (`mcp__Claude_Preview__*`).
+
+### 10.2 Routing i przejścia
+
+`src/App.tsx` zawiera całą logikę routingu. `BrowserRouter` + `AnimatePresence mode="wait"` opakowuje `Routes` w `motion.div` z fade+scale (cubic-bezier `0.32, 0.72, 0, 1`). Trasy:
+
+| Path | Screen | Reguła |
+|---|---|---|
+| `/onboarding` | `Onboarding` | jeśli `done === true` → redirect na `/` |
+| `/` | `Dashboard` | jeśli `done === false` → redirect na `/onboarding` |
+| `/sub/:id` | `Action` | jeśli `getById(id) === undefined` → redirect na `/` |
+
+Każdy `useReducedMotion()` musi być respektowany (CLAUDE.md §8).
+
+### 10.3 State — dwa zustand store'y z `persist`
+
+- **`src/store/subscriptions.ts`** — `useSubscriptions`: lista subskrypcji, `addSubscription`, `remove`, `getById`, `lastAddedId` + `clearLastAdded` (highlight świeżo dodanej karty). Persist klucz: `ostatni-dzien-subs`. Mock z `src/data/mock.ts` jest seedem przy pierwszym uruchomieniu.
+- **`src/store/onboarding.ts`** — `useOnboarding`: `done`, `markDone`, `reset`. Persist klucz: `ostatni-dzien-onboarding`.
+- **`sessionStorage` key `open-adder-after-onboarding`** — most między onboardingiem a Smart Inputem (przeżywa `Navigate` z `replace`, nie przeżywa zamknięcia karty). Ustawia ostatni slajd onboardingu, czyta `Dashboard` przy mount.
+
+### 10.4 Struktura komponentów
+
+```
+src/
+  screens/        Dashboard, Action, Onboarding         ← per route
+  components/
+    ui/           Button, Tag, Toast, ConfirmDialog     ← atomy
+    cards/        SubCard, SubLogo                      ← karta subskrypcji
+    charts/       MiniChart                             ← 6-słupkowy wykres
+    layout/       PhoneFrame, StatusBar, SectionDivider ← scena/ramka telefonu
+    action/       InstructionSheet                      ← bottom sheet z krokami
+    smartinput/   SmartInputFlow (orchestrator),
+                  SourceSheet, ProcessingScreen,
+                  AddForm, SuccessScreen
+    onboarding/   illustrations.tsx                     ← 3 ilustracje slajdów
+```
+
+`SubCard` ma 3 warianty: `urgency: 'today'` (Adobe, gradient + eyebrow „UWAGA"), `'critical'` (Netflix/Canva ≤3 dni, lewy terakotowy border + czerwony licznik), `'normal'`. `SubLogo` wspiera `size: 'sm' | 'lg'` (40 px na liście, 72 px na ekranie akcji).
+
+### 10.5 Smart Input (Faza 3) — orchestrator
+
+`SmartInputFlow` to **overlay nad Dashboardem** (FAB ustawia `adding=true`). Trzyma stan kroku:
+```
+sheet → picker → processing (3 s timeout, fake OCR) → form (mode: 'ai' | 'manual') → success
+```
+W `'success'`, jedno z dwóch:
+- **„Zobacz na liście"** → `addSubscription(draft)` + zamyka flow
+- **„Dodaj kolejną"** → `addSubscription(draft)` + reset do `sheet`
+
+`AddForm` w trybie `'ai'` pre-fillsuje **celowo niedokładne** guessy (`Spotify` / `29,99 zł` / `07/06/2026`) z badge'ami AI; badge znika gdy user edytuje pole. W trybie `'manual'` puste pola z placeholderami. **NIE podłączaj realnego OCR** — fake jest decyzją produktową (§2 i §8).
+
+### 10.6 Design tokeny i animacje
+
+- **`tailwind.config.js`** — wszystkie kolory z §3 jako klasy (`bg-bg-base`, `text-accent`, `text-alert`, `border-hairline`…). `fontFamily.serif/sans/mono` mapuje na Fraunces / Geist / Geist Mono. `borderRadius.sm/md/lg/xl/pill`.
+- **`src/styles/globals.css`** — fonty z `@fontsource` (importy na górze), plus CSS keyframes które trudno zrobić w Tailwind: `pulse-ring`, `scan-line`, `scanning-glow`, `processing-dots`, `success-pop / success-check / success-ring / success-fade`, `new-card-glow`. Sekcja `@media (prefers-reduced-motion: reduce)` na końcu **wyłącza wszystkie z nich** — gdy dodajesz nową keyframe-animację, dopisz ją do listy.
+
+### 10.7 Logotypy marek (`SubLogo`)
+
+`STYLES` w `src/components/cards/SubLogo.tsx` — rejestr per brand. Trzy ścieżki renderu:
+
+1. **`icon: siNetflix` etc.** — autentyczne logo z `simple-icons` v16 (dostępne: Netflix, Spotify, Notion, Apple, iCloud).
+2. **`customPath`** — surowy SVG path 24×24. Adobe ma własny chunky „A".
+3. **wordmark** — tekst (`logoText` lub `textOverride`), font sans/serif, opcjonalnie italic.
+
+Plus `bgGradient` zamiast `bg` dla Canva (turkus→fiolet) i Disney+ (granat→błękit). Brandy **usunięte z simple-icons** (Adobe, Canva, Disney+, LinkedIn) zostają na własnym wordmarku — nie odtwarzaj ręcznie ich oficjalnych logo (powód znakowy).
+
+### 10.8 Konwencje
+
+- **Język**: kod, nazwy, commity → angielski. Komentarze JSDoc → polski. UI → polski.
+- **Branche**: `phase-N-{nazwa}` (np. `phase-4-onboarding`). Po skończeniu fazy: merge `--no-ff` do `main`, update statusu w `PROJECT_PLAN.md`.
+- **Komentarze**: krótkie, wyjaśniają „dlaczego", nie „co". Jeśli komponent ma wariant zależny od propsu, opisz to.
+- **CSS**: pierwszeństwo Tailwind, ale jeśli design wymaga gradientu, box-shadow z niestandardowymi wartościami lub konkretnego pikselowego rozmiaru spoza skali — `style={{ ... }}` jest OK (nie utility-everywhere).
+- **Easing**: `cubic-bezier(0.32, 0.72, 0, 1)` dla przejść (slide/scale) i `cubic-bezier(0.34, 1.56, 0.64, 1)` dla bouncy (dialog pop, FAB).
+
+### 10.9 Weryfikacja po zmianach
+
+Po każdej znaczącej zmianie wizualnej:
+1. `npx tsc --noEmit` (rzadko psuje się build a nie TS — sprawdzaj oba)
+2. Otwórz preview (`mcp__Claude_Preview__preview_start` z `dev`), zrób screenshot, porównaj z prototypem HTML w `references/`.
+3. Sprawdź wszystkie warianty komponentu (np. `SubCard` w trybach today/critical/normal).
+4. `references/` jest w `.gitignore` — to source of truth wizualny, **nie commituj go**.
