@@ -2,7 +2,7 @@
 
 > Aplikacja, która pamięta o Twoich subskrypcjach i triallach. **Pokażemy ile dni zostało, anulujemy zanim pobiorą środki.**
 
-**Status:** MVP klikalny prototyp (4 fazy ukończone). Walidacja z użytkownikami w następnym kroku.
+**🟢 Live demo:** [ostatni-dzien-2mn8.vercel.app](https://ostatni-dzien-2mn8.vercel.app/onboarding) · **Status:** MVP klikalny prototyp (4 fazy ukończone). Walidacja z użytkownikami w następnym kroku.
 
 ## Co to robi
 
