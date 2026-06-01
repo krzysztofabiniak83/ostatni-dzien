@@ -1,7 +1,11 @@
-/** Pasek statusu iOS — czas + ikony sieci/wifi/baterii. */
+/**
+ * Mock paska statusu iOS — czas + ikony sieci/wifi/baterii.
+ * Tylko na desktopie/tablecie (w ramce telefonu); na mobile chowamy go,
+ * bo użytkownik ma już prawdziwy status bar urządzenia.
+ */
 export function StatusBar() {
   return (
-    <div className="flex h-[50px] flex-shrink-0 items-center justify-between px-8 pt-[18px] text-[15px] font-semibold text-ink-primary">
+    <div className="hidden h-[50px] flex-shrink-0 items-center justify-between px-8 pt-[18px] text-[15px] font-semibold text-ink-primary md:flex">
       <span>9:41</span>
       <div className="flex items-center gap-[5px]">
         <svg width="17" height="11" viewBox="0 0 17 11" fill="none">
