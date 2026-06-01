@@ -5,6 +5,7 @@ import { SectionDivider } from '../components/layout/SectionDivider'
 import { StatusBar } from '../components/layout/StatusBar'
 import { Toast } from '../components/ui/Toast'
 import { SmartInputFlow } from '../components/smartinput/SmartInputFlow'
+import { SettingsSheet } from '../components/settings/SettingsSheet'
 import { useSubscriptions } from '../store/subscriptions'
 import type { Section, Subscription } from '../types/subscription'
 
@@ -17,10 +18,19 @@ const SECTIONS: { key: Section; label: string }[] = [
 
 const MONTH_TOTAL = '434,96 zł'
 
-function IconButton({ children, label }: { children: ReactNode; label: string }) {
+function IconButton({
+  children,
+  label,
+  onClick,
+}: {
+  children: ReactNode
+  label: string
+  onClick?: () => void
+}) {
   return (
     <button
       aria-label={label}
+      onClick={onClick}
       className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-hairline bg-bg-card transition-all duration-150 hover:border-ink-tertiary active:scale-[0.94]"
     >
       {children}
@@ -48,6 +58,7 @@ export function Dashboard() {
     return false
   })()
   const [adding, setAdding] = useState(initialAdding)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -88,7 +99,7 @@ export function Dashboard() {
                 <path d="M10 21a2 2 0 0 0 4 0" />
               </svg>
             </IconButton>
-            <IconButton label="Ustawienia">
+            <IconButton label="Ustawienia" onClick={() => setSettingsOpen(true)}>
               <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="#0D1F1A" strokeWidth={1.6}>
                 <circle cx="12" cy="12" r="3" />
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -151,6 +162,8 @@ export function Dashboard() {
       </button>
 
       {adding && <SmartInputFlow onExit={() => setAdding(false)} onToast={flashToast} />}
+
+      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       <Toast message={toast} />
     </>

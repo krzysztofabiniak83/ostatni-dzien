@@ -9,6 +9,7 @@ import { MiniChart } from '../components/charts/MiniChart'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { InstructionSheet } from '../components/action/InstructionSheet'
 import { Toast } from '../components/ui/Toast'
+import { Toggle } from '../components/ui/Toggle'
 import { useSubscriptions } from '../store/subscriptions'
 
 function ExternalIcon() {
@@ -25,25 +26,6 @@ function DocIcon() {
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <path d="M14 2v6h6M9 13h6M9 17h4" />
     </svg>
-  )
-}
-
-/** Przełącznik on/off — zielony gdy włączony. */
-function Toggle({ on }: { on: boolean }) {
-  return (
-    <span
-      className={clsx(
-        'relative inline-flex h-[22px] w-[38px] flex-shrink-0 items-center rounded-pill transition-colors duration-200',
-        on ? 'bg-accent' : 'bg-hairline',
-      )}
-    >
-      <span
-        className={clsx(
-          'absolute h-[18px] w-[18px] rounded-full bg-white shadow-sm transition-transform duration-200',
-          on ? 'translate-x-[18px]' : 'translate-x-[2px]',
-        )}
-      />
-    </span>
   )
 }
 
