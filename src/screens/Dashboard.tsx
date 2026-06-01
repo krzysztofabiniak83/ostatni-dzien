@@ -34,7 +34,20 @@ export function Dashboard() {
   const clearLastAdded = useSubscriptions((s) => s.clearLastAdded)
   const navigate = useNavigate()
 
-  const [adding, setAdding] = useState(false)
+  // Po onboardingu CTA z ostatniego slajdu zostawia flagę w sessionStorage
+  // (przeżywa redirect, nie przeżywa zamknięcia karty).
+  const initialAdding = (() => {
+    try {
+      if (sessionStorage.getItem('open-adder-after-onboarding') === '1') {
+        sessionStorage.removeItem('open-adder-after-onboarding')
+        return true
+      }
+    } catch {
+      // ignore
+    }
+    return false
+  })()
+  const [adding, setAdding] = useState(initialAdding)
   const [toast, setToast] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 

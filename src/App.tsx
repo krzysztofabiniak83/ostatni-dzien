@@ -1,8 +1,10 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { PhoneFrame } from './components/layout/PhoneFrame'
 import { Dashboard } from './screens/Dashboard'
 import { Action } from './screens/Action'
+import { Onboarding } from './screens/Onboarding'
+import { useOnboarding } from './store/onboarding'
 
 // Przejście fade+scale — cubic-bezier z CLAUDE.md (decyzje produktowe).
 const EASE = [0.32, 0.72, 0, 1] as const
@@ -10,6 +12,7 @@ const EASE = [0.32, 0.72, 0, 1] as const
 function AnimatedRoutes() {
   const location = useLocation()
   const reduce = useReducedMotion()
+  const onboardingDone = useOnboarding((s) => s.done)
 
   return (
     <AnimatePresence mode="wait">
@@ -22,7 +25,14 @@ function AnimatedRoutes() {
         transition={{ duration: reduce ? 0 : 0.32, ease: EASE }}
       >
         <Routes location={location}>
-          <Route path="/" element={<Dashboard />} />
+          <Route
+            path="/"
+            element={onboardingDone ? <Dashboard /> : <Navigate to="/onboarding" replace />}
+          />
+          <Route
+            path="/onboarding"
+            element={onboardingDone ? <Navigate to="/" replace /> : <Onboarding />}
+          />
           <Route path="/sub/:id" element={<Action />} />
         </Routes>
       </motion.div>
@@ -34,7 +44,7 @@ function App() {
   return (
     <BrowserRouter>
       <PhoneFrame
-        label="Faza 3 · Smart Input"
+        label="Faza 4 · Onboarding"
         caption={
           <>
             Kliknij <strong className="font-medium text-ink-primary">+</strong> — dodaj subskrypcję
