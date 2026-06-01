@@ -1,7 +1,9 @@
 import type { PanInfo } from 'framer-motion'
+import type { ComponentType } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
+import { LifeBuoy, Mail } from 'lucide-react'
 import { Toggle } from '../ui/Toggle'
 import { useSettings, type Currency, type ReminderDays } from '../../store/settings'
 import { useOnboarding } from '../../store/onboarding'
@@ -59,28 +61,41 @@ function NavRow({
   onClick,
   disabled,
   badge,
+  icon: Icon,
 }: {
   label: string
   onClick?: () => void
   disabled?: boolean
   badge?: string
+  icon?: ComponentType<{ className?: string; strokeWidth?: number }>
 }) {
   return (
     <button
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       className={clsx(
-        'flex w-full items-center justify-between px-5 py-4 text-left text-[14px] transition-colors',
+        'flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-[14px] transition-colors',
         disabled ? 'cursor-not-allowed text-ink-tertiary' : 'text-ink-primary hover:bg-bg-subtle',
       )}
     >
-      <span>{label}</span>
+      <span className="flex min-w-0 items-center gap-3">
+        {Icon && (
+          <Icon
+            className={clsx(
+              'h-[18px] w-[18px] flex-shrink-0',
+              disabled ? 'text-ink-tertiary' : 'text-ink-secondary',
+            )}
+            strokeWidth={1.6}
+          />
+        )}
+        <span className="truncate">{label}</span>
+      </span>
       {badge ? (
-        <span className="font-mono text-[9px] uppercase tracking-[0.1em] text-ink-tertiary">
+        <span className="flex-shrink-0 font-mono text-[9px] uppercase tracking-[0.1em] text-ink-tertiary">
           {badge}
         </span>
       ) : (
-        <span className="text-[16px] text-ink-tertiary">›</span>
+        <span className="flex-shrink-0 text-[16px] text-ink-tertiary">›</span>
       )}
     </button>
   )
@@ -203,9 +218,13 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                 <SectionLabel>Pomoc i wsparcie</SectionLabel>
                 <div className="flex flex-col overflow-hidden rounded-lg border border-hairline bg-bg-card">
                   <div className="border-b border-hairline">
-                    <NavRow label="Jak dodać pierwszą subskrypcję?" onClick={handleRestartOnboarding} />
+                    <NavRow
+                      label="Jak dodać pierwszą subskrypcję?"
+                      onClick={handleRestartOnboarding}
+                      icon={LifeBuoy}
+                    />
                   </div>
-                  <NavRow label="Znalazłeś błąd lub masz pomysł?" onClick={handleFeedback} />
+                  <NavRow label="Znalazłeś błąd lub masz pomysł?" onClick={handleFeedback} icon={Mail} />
                 </div>
               </div>
 

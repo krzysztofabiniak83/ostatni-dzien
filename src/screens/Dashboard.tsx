@@ -6,7 +6,11 @@ import { StatusBar } from '../components/layout/StatusBar'
 import { Toast } from '../components/ui/Toast'
 import { SmartInputFlow } from '../components/smartinput/SmartInputFlow'
 import { SettingsSheet } from '../components/settings/SettingsSheet'
+import { NotificationsSheet } from '../components/notifications/NotificationsSheet'
 import { useSubscriptions } from '../store/subscriptions'
+import { useSettings } from '../store/settings'
+import { useNotifications } from '../store/notifications'
+import { buildPaymentAlerts } from '../utils/notifications'
 import type { Section, Subscription } from '../types/subscription'
 
 const SECTIONS: { key: Section; label: string }[] = [
@@ -22,18 +26,27 @@ function IconButton({
   children,
   label,
   onClick,
+  badge,
 }: {
   children: ReactNode
   label: string
   onClick?: () => void
+  /** Czerwona kropka (Centrum Powiadomień). */
+  badge?: boolean
 }) {
   return (
     <button
       aria-label={label}
       onClick={onClick}
-      className="flex h-[38px] w-[38px] items-center justify-center rounded-full border border-hairline bg-bg-card transition-all duration-150 hover:border-ink-tertiary active:scale-[0.94]"
+      className="relative flex h-[38px] w-[38px] items-center justify-center rounded-full border border-hairline bg-bg-card transition-all duration-150 hover:border-ink-tertiary active:scale-[0.94]"
     >
       {children}
+      {badge && (
+        <span
+          aria-label="Nowe powiadomienia"
+          className="absolute right-[5px] top-[5px] h-[8px] w-[8px] rounded-full bg-alert ring-2 ring-bg-card"
+        />
+      )}
     </button>
   )
 }
@@ -42,7 +55,18 @@ export function Dashboard() {
   const subscriptions = useSubscriptions((s) => s.subscriptions)
   const lastAddedId = useSubscriptions((s) => s.lastAddedId)
   const clearLastAdded = useSubscriptions((s) => s.clearLastAdded)
+  const notify = useSettings((s) => s.notify)
+  const reminderDays = useSettings((s) => s.reminderDays)
+  const pushNotification = useNotifications((s) => s.push)
   const navigate = useNavigate()
+
+  // Sprawdź alerty płatności przy mount + zmianach (subscriptions / reminderDays / notify).
+  // Dedup po metaKey w store — nie duplikujemy alertu dla tej samej subskrypcji w tym samym dniu.
+  useEffect(() => {
+    if (!notify) return
+    const alerts = buildPaymentAlerts(subscriptions, reminderDays)
+    alerts.forEach((a) => pushNotification(a))
+  }, [subscriptions, reminderDays, notify, pushNotification])
 
   // Po onboardingu CTA z ostatniego slajdu zostawia flagę w sessionStorage
   // (przeżywa redirect, nie przeżywa zamknięcia karty).
@@ -59,6 +83,8 @@ export function Dashboard() {
   })()
   const [adding, setAdding] = useState(initialAdding)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const unreadCount = useNotifications((s) => s.items.filter((it) => !it.read).length)
   const [toast, setToast] = useState<string | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -93,7 +119,11 @@ export function Dashboard() {
             Ostatni <em className="font-light not-italic text-accent">Dzień</em>
           </div>
           <div className="flex gap-2">
-            <IconButton label="Powiadomienia">
+            <IconButton
+              label="Powiadomienia"
+              onClick={() => setNotificationsOpen(true)}
+              badge={unreadCount > 0}
+            >
               <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="#0D1F1A" strokeWidth={1.6}>
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
                 <path d="M10 21a2 2 0 0 0 4 0" />
@@ -164,6 +194,8 @@ export function Dashboard() {
       {adding && <SmartInputFlow onExit={() => setAdding(false)} onToast={flashToast} />}
 
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+      <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
 
       <Toast message={toast} />
     </>
