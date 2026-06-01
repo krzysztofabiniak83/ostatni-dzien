@@ -5,12 +5,12 @@ import { siNetflix, siNotion, siSpotify } from 'simple-icons'
  * z palety produktu (zieleń + terakota), bez fotografii i bez emoji.
  */
 
-/** Slajd 1 — koniec niechcianych opłat: stos przekreślonych kwot ze szpilką "434,96 zł". */
+/** Slajd 1 — koniec niechcianych opłat: stos przekreślonych kwot z logo brandów. */
 export function IllustrationStop() {
   const items = [
-    { label: 'Netflix Premium', amount: '67,00 zł' },
-    { label: 'Spotify Family', amount: '29,99 zł' },
-    { label: 'Notion AI', amount: '40,00 zł' },
+    { label: 'Netflix Premium', amount: '67,00 zł', bg: '#E50914', path: siNetflix.path, dark: false },
+    { label: 'Spotify Family', amount: '29,99 zł', bg: '#1DB954', path: siSpotify.path, dark: false },
+    { label: 'Notion AI', amount: '40,00 zł', bg: '#FFFFFF', path: siNotion.path, dark: true },
   ]
   return (
     <div className="relative mx-auto flex h-[220px] w-[260px] flex-col items-center justify-center">
@@ -21,12 +21,23 @@ export function IllustrationStop() {
         {items.map((it, i) => (
           <div
             key={i}
-            className="flex items-center justify-between rounded-lg border border-hairline bg-bg-card px-4 py-[10px]"
+            className="flex items-center gap-3 rounded-lg border border-hairline bg-bg-card px-3 py-[10px]"
             style={{
               transform: `rotate(${i === 1 ? 0 : i === 0 ? -1.5 : 1.5}deg)`,
             }}
           >
-            <span className="text-[13px] font-medium text-ink-primary">{it.label}</span>
+            <div
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md"
+              style={{
+                backgroundColor: it.bg,
+                boxShadow: it.bg === '#FFFFFF' ? 'inset 0 0 0 1px rgba(13,31,26,0.08)' : undefined,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill={it.dark ? '#0D1F1A' : '#fff'} aria-hidden="true">
+                <path d={it.path} />
+              </svg>
+            </div>
+            <span className="flex-1 text-[13px] font-medium text-ink-primary">{it.label}</span>
             <span className="relative text-[13px] text-ink-secondary">
               {it.amount}
               <span className="absolute left-[-2px] right-[-2px] top-1/2 h-px bg-alert" />
