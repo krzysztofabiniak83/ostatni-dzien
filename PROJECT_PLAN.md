@@ -13,8 +13,8 @@ Roadmap projektu. Aktualizuj sekcję "Status" po każdej fazie.
 - ✅ **Faza 1 (React)** — Setup Vite + Dashboard z mock data
 - ✅ **Faza 2 (React)** — Ekran Akcji + routing + przejścia fade+scale
 - ✅ **Faza 3 (React)** — Smart Input (sheet → fake OCR → formularz → sukces, localStorage)
-- ⏳ **Faza 4 (React)** — **TU JESTEŚMY** — Onboarding (3 slajdy + dots + swipe, flaga onboardingDone)
-- ⏸️ Faza 5 — Spięcie w pełen prototyp + deploy
+- ✅ **Faza 4 (React)** — Onboarding (3 slajdy + dots + swipe, flaga onboardingDone)
+- ⏳ **Faza 5 (React)** — **TU JESTEŚMY** — Polish + Deploy (meta, favicon, README, vercel.json, tag v0.1-mvp). Deploy = Twój klik w Vercel UI.
 - ⏸️ Walidacja z użytkownikami
 - ⏸️ Roadmapa post-MVP
 
