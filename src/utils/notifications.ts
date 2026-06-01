@@ -33,22 +33,27 @@ export function buildPaymentAlerts(
   subscriptions: Subscription[],
   reminderDays: number,
 ): Omit<Notification, 'id' | 'createdAt' | 'read'>[] {
-  return subscriptions
+  // Zwracamy w kolejności DESC po pilności (najmniej pilne pierwsze).
+  // Dashboard iteruje przez wynik i pushuje każdą notyfikację na górę storu,
+  // więc najpilniejsza wpada ostatnia → ląduje na samym topie listy.
+  const matched = subscriptions
     .map((sub) => {
       const effectiveDays = sub.daysUntil === -1 ? 0 : sub.daysUntil
       if (effectiveDays < 0 || effectiveDays > reminderDays) return null
-
-      const alert: Omit<Notification, 'id' | 'createdAt' | 'read'> = {
-        type: 'critical',
-        title: alertTitle(sub, effectiveDays),
-        subtitle: `Z konta zniknie ${sub.amount}`,
-        logoClass: sub.logoClass,
-        logoText: sub.logoText,
-        metaKey: `critical:${sub.id}:${effectiveDays}`,
-      }
-      return alert
+      return { sub, effectiveDays }
     })
-    .filter((x): x is Omit<Notification, 'id' | 'createdAt' | 'read'> => x !== null)
+    .filter((x): x is { sub: Subscription; effectiveDays: number } => x !== null)
+    .sort((a, b) => b.effectiveDays - a.effectiveDays)
+
+  return matched.map(({ sub, effectiveDays }) => ({
+    type: 'critical' as const,
+    title: alertTitle(sub, effectiveDays),
+    subtitle: `Z konta zniknie ${sub.amount}`,
+    logoClass: sub.logoClass,
+    logoText: sub.logoText,
+    subId: sub.id,
+    metaKey: `critical:${sub.id}:${effectiveDays}`,
+  }))
 }
 
 /**
