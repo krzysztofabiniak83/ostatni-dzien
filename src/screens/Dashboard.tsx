@@ -44,7 +44,7 @@ function IconButton({
       {badge && (
         <span
           aria-label="Nowe powiadomienia"
-          className="badge-pulse absolute right-[5px] top-[5px] h-[8px] w-[8px] rounded-full bg-alert ring-2 ring-bg-card"
+          className="badge-pulse absolute right-[4px] top-[4px] h-[10px] w-[10px] rounded-full bg-alert ring-2 ring-bg-card"
         />
       )}
     </button>

@@ -183,13 +183,28 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Pulsująca kropka (badge dzwonka) — sygnalizuje nieprzeczytane powiadomienie. */
+/* Pulsująca kropka (badge dzwonka) — sygnalizuje nieprzeczytane powiadomienie.
+   Sama kropka delikatnie pulsuje + dodatkowy pierścień rozchodzi się jak radar. */
 .badge-pulse {
-  animation: badge-pulse 2.2s ease-in-out infinite;
+  animation: badge-pulse 1.8s ease-in-out infinite;
 }
 @keyframes badge-pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.18); opacity: 0.78; }
+  50% { transform: scale(1.22); opacity: 0.85; }
+}
+
+.badge-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--alert, #b85c3c);
+  opacity: 0;
+  animation: badge-ring 1.8s ease-out infinite;
+}
+@keyframes badge-ring {
+  0% { transform: scale(1); opacity: 0.55; }
+  80%, 100% { transform: scale(2.6); opacity: 0; }
 }
 
 /* Highlight nowo dodanej karty na dashboardzie */
