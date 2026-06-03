@@ -27,7 +27,9 @@ export function convertAmount(
  * - USD: "$72,49"
  */
 export function formatAmount(amountInMinor: number, currency: Currency): string {
-  const major = amountInMinor / 100
+  // Defensywnie: undefined / NaN (np. stara persystencja) → traktuj jak 0.
+  const safe = typeof amountInMinor === 'number' && Number.isFinite(amountInMinor) ? amountInMinor : 0
+  const major = safe / 100
   // Polski lokal: "289,99". USD też z przecinkiem dla spójności wizualnej.
   const value = major.toLocaleString('pl-PL', {
     minimumFractionDigits: 2,

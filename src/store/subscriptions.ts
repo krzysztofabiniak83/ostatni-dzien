@@ -101,6 +101,28 @@ export const useSubscriptions = create<SubscriptionsState>()(
     }),
     {
       name: 'ostatni-dzien-subs',
+      version: 1,
+      // Migracja v0 → v1: kwoty trzymane wcześniej jako string (np. "67,00 zł")
+      // konwertujemy na liczby w groszach (`amountPLN`, `chartTotalPLN`).
+      // Bez tego stary localStorage powodował NaN po podpięciu waluty.
+      migrate: (persisted) => {
+        type LegacySub = Partial<Subscription> & { amount?: string; chartTotal?: string }
+        const state = (persisted ?? {}) as { subscriptions?: LegacySub[] }
+        const list = Array.isArray(state.subscriptions) ? state.subscriptions : []
+        const migrated: Subscription[] = list.map((sub) => {
+          const amountPLN =
+            typeof sub.amountPLN === 'number' && Number.isFinite(sub.amountPLN)
+              ? sub.amountPLN
+              : (parseAmountInput(sub.amount ?? '') ?? 0)
+          const chartTotalPLN =
+            typeof sub.chartTotalPLN === 'number' && Number.isFinite(sub.chartTotalPLN)
+              ? sub.chartTotalPLN
+              : (parseAmountInput(sub.chartTotal ?? '') ?? 0)
+          const { amount: _a, chartTotal: _c, ...rest } = sub
+          return { ...(rest as Subscription), amountPLN, chartTotalPLN }
+        })
+        return { subscriptions: migrated.length > 0 ? migrated : MOCK_SUBSCRIPTIONS }
+      },
       partialize: (state) => ({ subscriptions: state.subscriptions }),
     },
   ),
