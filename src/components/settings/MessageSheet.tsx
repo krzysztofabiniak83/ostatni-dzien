@@ -7,6 +7,8 @@ interface MessageSheetProps {
   open: boolean
   onClose: () => void
   subject: string
+  /** Adres odbiorcy — FormSubmit forwarduje wiadomość prosto tam. */
+  to: string
   /** Fallback mailto (gdy backend padnie). */
   fallbackTo?: string
   onSent?: () => void
@@ -14,14 +16,16 @@ interface MessageSheetProps {
 
 const MAX_CHARS = 2000
 
-type Status = 'idle' | 'sending' | 'sent' | 'error'
+type Status = 'idle' | 'sending' | 'sent' | 'pending-activation' | 'error'
+
+const FORMSUBMIT_ACTIVATED_KEY = 'ostatni-dzien-msg-activated'
 
 /**
  * Bottom sheet z edytorem Tiptap → POST /api/send-feedback (Resend) →
  * email leci prosto na skrzynkę odbiorcy. Bez otwierania klienta poczty.
  * Fallback: jeśli backend padnie, oferujemy „spróbuj mailem" z pre-fillem.
  */
-export function MessageSheet({ open, onClose, subject, fallbackTo, onSent }: MessageSheetProps) {
+export function MessageSheet({ open, onClose, subject, to, fallbackTo, onSent }: MessageSheetProps) {
   const [html, setHtml] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -49,26 +53,54 @@ export function MessageSheet({ open, onClose, subject, fallbackTo, onSent }: Mes
     setErrorMsg(null)
 
     const bodyPlain = htmlToPlainText(html)
+    const activated = (() => {
+      try {
+        return localStorage.getItem(FORMSUBMIT_ACTIVATED_KEY) === '1'
+      } catch {
+        return false
+      }
+    })()
 
     try {
-      const res = await fetch('/api/send-feedback', {
+      // FormSubmit.co — zero-config email forwarding. Pierwszy POST wysyła
+      // link aktywacyjny na odbiorcę; każdy następny leci wprost.
+      const res = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, bodyPlain, bodyHtml: html }),
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          _subject: subject,
+          _template: 'table',
+          _captcha: 'false',
+          message: bodyPlain,
+        }),
       })
 
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(data.error || `Błąd ${res.status}`)
+      const data = (await res.json().catch(() => ({}))) as {
+        success?: string | boolean
+        message?: string
       }
 
-      setStatus('sent')
+      const success = data.success === true || data.success === 'true'
+      if (!res.ok || !success) {
+        throw new Error(data.message || `Błąd ${res.status}`)
+      }
+
+      // Pierwsza wysyłka u tego usera — pokaż info o linku aktywacyjnym.
+      if (!activated) {
+        try {
+          localStorage.setItem(FORMSUBMIT_ACTIVATED_KEY, '1')
+        } catch {
+          // ignore
+        }
+        setStatus('pending-activation')
+      } else {
+        setStatus('sent')
+      }
       onSent?.()
-      // Auto-close po krótkim pokazie sukcesu.
       window.setTimeout(() => {
         reset()
         onClose()
-      }, 1600)
+      }, 2400)
     } catch (err) {
       setStatus('error')
       setErrorMsg(err instanceof Error ? err.message : 'Nie udało się wysłać.')
@@ -100,7 +132,7 @@ export function MessageSheet({ open, onClose, subject, fallbackTo, onSent }: Mes
             animate={{ y: 0 }}
             exit={{ y: '110%' }}
             transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-            drag={status === 'sent' ? false : 'y'}
+            drag={status === 'sent' || status === 'pending-activation' ? false : 'y'}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.4 }}
             onDragEnd={handleDragEnd}
@@ -120,7 +152,7 @@ export function MessageSheet({ open, onClose, subject, fallbackTo, onSent }: Mes
                   </svg>
                 </button>
               </div>
-              {status !== 'sent' && (
+              {status !== 'sent' && status !== 'pending-activation' && (
                 <div className="mb-3 text-[12px] leading-relaxed text-ink-secondary">
                   Co Ci się spodobało, co przeszkadza, co byś dodał? Wiadomość pójdzie prosto na naszą skrzynkę
                   — bez otwierania klienta poczty.
@@ -128,14 +160,18 @@ export function MessageSheet({ open, onClose, subject, fallbackTo, onSent }: Mes
               )}
             </div>
 
-            {status === 'sent' ? (
+            {status === 'sent' || status === 'pending-activation' ? (
               <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-bg-base">
                   <Check className="h-6 w-6" strokeWidth={2.4} />
                 </div>
-                <div className="font-serif text-[22px] tracking-[-0.01em]">Wysłano</div>
-                <div className="mt-1 max-w-[280px] text-[13px] leading-relaxed text-ink-secondary">
-                  Dzięki! Odezwiemy się jak tylko damy radę.
+                <div className="font-serif text-[22px] tracking-[-0.01em]">
+                  {status === 'pending-activation' ? 'Prawie gotowe' : 'Wysłano'}
+                </div>
+                <div className="mt-1 max-w-[300px] text-[13px] leading-relaxed text-ink-secondary">
+                  {status === 'pending-activation'
+                    ? 'Sprawdź skrzynkę — wysłaliśmy jednorazowy link aktywujący. Po kliknięciu kolejne wiadomości będą trafiać prosto na e-mail.'
+                    : 'Dzięki! Odezwiemy się jak tylko damy radę.'}
                 </div>
               </div>
             ) : (

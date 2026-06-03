@@ -63,22 +63,23 @@ Sekcje 1–9 to brief produktowo/designerski.
 - **Calm/minimal, editorial** — żadnych fioletowych gradientów ani „modern AI aesthetics". Akcent ciemnej zieleni (`#1F3D33`), stan krytyczny terakotowy (`#B85C3C`).
 - **`prefers-reduced-motion` respektowane wszędzie** — pulse-ring, scan-line, success animations są wyłączane.
 
-## Konfiguracja: wysyłka wiadomości in-app (Resend)
+## Wysyłka wiadomości in-app (FormSubmit, zero-config)
 
-Wiadomości z **Ustawienia → Napisz do nas** lecą prosto na skrzynkę bez otwierania klienta poczty (serverless function `api/send-feedback.ts` + [Resend](https://resend.com)).
+**Ustawienia → Napisz do nas** wysyła wiadomość prosto na adres odbiorcy
+przez [FormSubmit.co](https://formsubmit.co) — bez backendu, bez kont, bez
+kluczy API.
 
-Setup jednorazowy:
+**Setup:** żaden. Adres odbiorcy jest zaszyty w `FEEDBACK_EMAIL` w `SettingsSheet.tsx`.
 
-1. Załóż konto na **https://resend.com** (free tier: 3000 maili/mc, 100/dzień).
-2. **API Keys** → **Create API Key** → kopiuj klucz `re_…`.
-3. W Vercel: **Project → Settings → Environment Variables** → dodaj:
-   - `RESEND_API_KEY` = `re_xxx` (Production + Preview + Development)
-   - (opcjonalnie) `FEEDBACK_TO_EMAIL` = `twój@email.pl` — domyślnie `krzysztofabiniak@gmail.com`
-4. **Redeploy** (Vercel automatycznie po następnym pushu).
+**Pierwsza wysyłka**: FormSubmit wyśle na adres odbiorcy jednorazowy link
+aktywujący — kliknięcie aktywuje endpoint. Od tego momentu każda kolejna
+wiadomość leci prosto na skrzynkę.
 
-Bez konfiguracji klucza endpoint zwróci 500 z czytelnym komunikatem, a frontend pokaże fallback „Spróbuj wysłać mailem" (otwiera natywny mailto).
+Jeśli FormSubmit padnie, frontend pokaże link „Spróbuj wysłać mailem"
+(natywny `mailto:` jako fallback).
 
-Wysyłka idzie z `onboarding@resend.dev` (free, bez weryfikacji domeny). W produkcji podmień na własną domenę w Resend → Domains, potem ustaw `FEEDBACK_FROM_EMAIL`.
+W produkcji można podmienić na własny backend (np. Resend / SendGrid) —
+endpoint frontu znajduje się w `MessageSheet.handleSend`.
 
 ## Roadmapa post-MVP
 

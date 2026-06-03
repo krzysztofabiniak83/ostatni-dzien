@@ -283,6 +283,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
         open={messageOpen}
         onClose={() => setMessageOpen(false)}
         subject="Wiadomość – Ostatni Dzień"
+        to={FEEDBACK_EMAIL}
         fallbackTo={FEEDBACK_EMAIL}
       />
     </AnimatePresence>
