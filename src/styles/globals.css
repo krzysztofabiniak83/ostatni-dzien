@@ -207,6 +207,63 @@ body {
   80%, 100% { transform: scale(2.6); opacity: 0; }
 }
 
+/* Tiptap / ProseMirror — spójny styl z resztą produktu (Geist UI). */
+.ProseMirror {
+  outline: none;
+  font-family: 'Geist', -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-primary, #0d1f1a);
+  min-height: 120px;
+}
+.ProseMirror p {
+  margin: 0 0 8px;
+}
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+.ProseMirror strong {
+  font-weight: 600;
+}
+.ProseMirror em {
+  font-style: italic;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+}
+.ProseMirror li > p {
+  margin: 0;
+}
+.ProseMirror a {
+  color: var(--accent, #1f3d33);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ProseMirror code {
+  background: var(--bg-subtle, #edeae3);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 0.92em;
+}
+.ProseMirror blockquote {
+  border-left: 3px solid var(--hairline, #e0ddd5);
+  margin: 8px 0;
+  padding-left: 12px;
+  color: var(--ink-secondary, #5c6661);
+  font-style: italic;
+}
+/* Placeholder Tiptapa renderowany przez extension-placeholder. */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--ink-tertiary, #9aa09c);
+  pointer-events: none;
+  height: 0;
+}
+
 /* Highlight nowo dodanej karty na dashboardzie */
 .new-card {
   animation: new-card-glow 2s ease-out;
