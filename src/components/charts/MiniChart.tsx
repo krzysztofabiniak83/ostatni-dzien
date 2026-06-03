@@ -1,8 +1,10 @@
 import clsx from 'clsx'
+import { useFormatAmount } from '../../utils/currency'
 
 interface MiniChartProps {
   heights: number[]
-  total: string
+  /** Suma 6 miesięcy w groszach (PLN). 0 → tryb pusty (trial). */
+  totalPLN: number
 }
 
 // Etykiety 6 ostatnich miesięcy (kończąc na bieżącym — maj 2026).
@@ -10,10 +12,12 @@ const MONTHS = ['Gru', 'Sty', 'Lut', 'Mar', 'Kwi', 'Maj']
 
 /**
  * Mini-wykres ostatnich 6 miesięcy. Ostatni słupek (bieżący miesiąc) = aktywny.
- * Dla triali (total "0 zł") słupki są zerowe → pokazujemy notkę.
+ * Dla triali (totalPLN === 0) słupki są zerowe → pokazujemy notkę.
  */
-export function MiniChart({ heights, total }: MiniChartProps) {
-  const isEmpty = total === '0 zł'
+export function MiniChart({ heights, totalPLN }: MiniChartProps) {
+  const fmt = useFormatAmount()
+  const isEmpty = totalPLN === 0
+  const total = fmt(totalPLN)
 
   return (
     <div className="mb-4 rounded-lg border border-hairline bg-bg-card p-5">

@@ -17,8 +17,8 @@ export interface Subscription {
   daysUntil: number
   /** Czytelna data pobrania, np. "2 czerwca · 9:00" lub "Dziś · 23:59". */
   date: string
-  /** Kwota z walutą, np. "67,00 zł". */
-  amount: string
+  /** Kwota w GROSZACH (waluta bazowa PLN). Np. 6700 = 67,00 zł. */
+  amountPLN: number
   /** Okres/kontekst, np. "miesięcznie" lub "po próbie, potem miesięcznie". */
   period: string
   /** Krótki opis pod kwotą na karcie, np. "miesięcznie" / "po próbie". */
@@ -28,6 +28,6 @@ export interface Subscription {
   section: Section
   /** 6 słupków mini-wykresu (wysokości 0-60) — wykorzystane w Fazie 2. */
   chartHeights: number[]
-  /** Suma z ostatnich 6 miesięcy, np. "402,00 zł". */
-  chartTotal: string
+  /** Suma z ostatnich 6 miesięcy w GROSZACH (PLN). Np. 40200 = 402,00 zł. */
+  chartTotalPLN: number
 }

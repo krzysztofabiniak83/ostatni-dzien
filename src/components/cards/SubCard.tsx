@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { Tag } from '../ui/Tag'
 import { SubLogo } from './SubLogo'
 import type { Subscription } from '../../types/subscription'
+import { useFormatAmount } from '../../utils/currency'
 
 interface SubCardProps {
   sub: Subscription
@@ -23,6 +24,7 @@ function AlertGlyph() {
  * Warianty: today (gradient + subtelny eyebrow "Uwaga"), critical (lewy border terracotta).
  */
 export function SubCard({ sub, onClick, highlight }: SubCardProps) {
+  const fmt = useFormatAmount()
   const isToday = sub.urgency === 'today'
   const isCritical = sub.urgency === 'critical' || isToday
   // Część czasowa daty, np. "Dziś · 23:59" → "23:59".
@@ -94,7 +96,7 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
           {sub.name}
         </div>
         <div className="mb-2 text-[12px] text-ink-secondary">
-          <strong className="font-medium text-ink-primary">{sub.amount}</strong> · {sub.periodShort}
+          <strong className="font-medium text-ink-primary">{fmt(sub.amountPLN)}</strong> · {sub.periodShort}
         </div>
         <div className="flex flex-wrap gap-[5px]">
           <Tag type={sub.type} />

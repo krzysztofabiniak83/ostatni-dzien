@@ -10,6 +10,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { InstructionSheet } from '../components/action/InstructionSheet'
 import { Toast } from '../components/ui/Toast'
 import { Toggle } from '../components/ui/Toggle'
+import { useFormatAmount } from '../utils/currency'
 import { useSubscriptions } from '../store/subscriptions'
 
 function ExternalIcon() {
@@ -34,6 +35,7 @@ export function Action() {
   const navigate = useNavigate()
   const sub = useSubscriptions((s) => (id ? s.getById(id) : undefined))
   const remove = useSubscriptions((s) => s.remove)
+  const fmt = useFormatAmount()
 
   const [showDelete, setShowDelete] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
@@ -137,7 +139,7 @@ export function Action() {
             <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
               {isCritical ? 'Pierwsza opłata' : 'Kwota'}
             </div>
-            <div className="font-serif text-[28px] tracking-[-0.02em]">{sub.amount}</div>
+            <div className="font-serif text-[28px] tracking-[-0.02em]">{fmt(sub.amountPLN)}</div>
             <div className="mt-[2px] text-[12px] text-ink-secondary">
               {isCritical ? 'jednorazowo, potem miesięcznie' : sub.period}
             </div>
@@ -167,7 +169,7 @@ export function Action() {
         </div>
 
         {/* Mini-wykres */}
-        <MiniChart heights={sub.chartHeights} total={sub.chartTotal} />
+        <MiniChart heights={sub.chartHeights} totalPLN={sub.chartTotalPLN} />
 
         {/* Akcje drugorzędne */}
         <div className="flex flex-col overflow-hidden rounded-lg border border-hairline bg-bg-card">

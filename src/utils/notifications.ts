@@ -32,6 +32,7 @@ function alertTitle(sub: Subscription, effectiveDays: number): string {
 export function buildPaymentAlerts(
   subscriptions: Subscription[],
   reminderDays: number,
+  formatAmount: (amountPLN: number) => string,
 ): Omit<Notification, 'id' | 'createdAt' | 'read'>[] {
   // Zwracamy w kolejności DESC po pilności (najmniej pilne pierwsze).
   // Dashboard iteruje przez wynik i pushuje każdą notyfikację na górę storu,
@@ -48,7 +49,7 @@ export function buildPaymentAlerts(
   return matched.map(({ sub, effectiveDays }) => ({
     type: 'critical' as const,
     title: alertTitle(sub, effectiveDays),
-    subtitle: `Z konta zniknie ${sub.amount}`,
+    subtitle: `Z konta zniknie ${formatAmount(sub.amountPLN)}`,
     logoClass: sub.logoClass,
     logoText: sub.logoText,
     subId: sub.id,
