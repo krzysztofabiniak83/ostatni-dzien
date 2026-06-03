@@ -1,45 +1,85 @@
 import { useState } from 'react'
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
-import { Send } from 'lucide-react'
+import { Check, Send } from 'lucide-react'
 import { htmlToPlainText, RichTextEditor } from '../editor/RichTextEditor'
 
 interface MessageSheetProps {
   open: boolean
   onClose: () => void
-  /** Adres docelowy + temat — używamy mailto jako transport (MVP, bez backendu). */
-  to: string
   subject: string
-  /** Callback po wysłaniu (np. toast). */
-  onSent?: (plainBody: string) => void
+  /** Fallback mailto (gdy backend padnie). */
+  fallbackTo?: string
+  onSent?: () => void
 }
 
 const MAX_CHARS = 2000
 
+type Status = 'idle' | 'sending' | 'sent' | 'error'
+
 /**
- * Bottom sheet z edytorem Tiptap do wysłania wiadomości in-app.
- * Demo use case dla RichTextEditor — pokazuje wzór "napisz w aplikacji →
- * jedno kliknięcie → systemowy klient poczty z gotowym body".
- *
- * W produkcji body można wysłać POST-em na backend zamiast mailto.
+ * Bottom sheet z edytorem Tiptap → POST /api/send-feedback (Resend) →
+ * email leci prosto na skrzynkę odbiorcy. Bez otwierania klienta poczty.
+ * Fallback: jeśli backend padnie, oferujemy „spróbuj mailem" z pre-fillem.
  */
-export function MessageSheet({ open, onClose, to, subject, onSent }: MessageSheetProps) {
+export function MessageSheet({ open, onClose, subject, fallbackTo, onSent }: MessageSheetProps) {
   const [html, setHtml] = useState('')
+  const [status, setStatus] = useState<Status>('idle')
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const reset = () => {
+    setHtml('')
+    setStatus('idle')
+    setErrorMsg(null)
+  }
+
+  const handleClose = () => {
+    reset()
+    onClose()
+  }
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.y > 80) onClose()
+    if (info.offset.y > 80) handleClose()
   }
 
   const isEmpty = !html || html === '<p></p>'
 
-  const handleSend = () => {
-    if (isEmpty) return
+  const handleSend = async () => {
+    if (isEmpty || status === 'sending') return
+    setStatus('sending')
+    setErrorMsg(null)
+
+    const bodyPlain = htmlToPlainText(html)
+
+    try {
+      const res = await fetch('/api/send-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, bodyPlain, bodyHtml: html }),
+      })
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(data.error || `Błąd ${res.status}`)
+      }
+
+      setStatus('sent')
+      onSent?.()
+      // Auto-close po krótkim pokazie sukcesu.
+      window.setTimeout(() => {
+        reset()
+        onClose()
+      }, 1600)
+    } catch (err) {
+      setStatus('error')
+      setErrorMsg(err instanceof Error ? err.message : 'Nie udało się wysłać.')
+    }
+  }
+
+  const tryMailtoFallback = () => {
+    if (!fallbackTo) return
     const plain = htmlToPlainText(html)
-    const mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plain)}`
-    // Wywołanie systemowego handlera mailto — bez nowej karty.
-    window.location.href = mailtoUrl
-    onSent?.(plain)
-    setHtml('')
-    onClose()
+    const url = `mailto:${fallbackTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(plain)}`
+    window.location.href = url
   }
 
   return (
@@ -52,7 +92,7 @@ export function MessageSheet({ open, onClose, to, subject, onSent }: MessageShee
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          onClick={onClose}
+          onClick={handleClose}
         >
           <motion.div
             className="flex max-h-[88%] w-full flex-col rounded-t-[28px] bg-bg-base shadow-[0_-20px_40px_-10px_rgba(13,31,26,0.2)]"
@@ -60,7 +100,7 @@ export function MessageSheet({ open, onClose, to, subject, onSent }: MessageShee
             animate={{ y: 0 }}
             exit={{ y: '110%' }}
             transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-            drag="y"
+            drag={status === 'sent' ? false : 'y'}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.4 }}
             onDragEnd={handleDragEnd}
@@ -72,7 +112,7 @@ export function MessageSheet({ open, onClose, to, subject, onSent }: MessageShee
                 <h2 className="font-serif text-[24px] tracking-[-0.02em]">Napisz do nas</h2>
                 <button
                   aria-label="Zamknij"
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-hairline bg-bg-card text-ink-secondary transition-all hover:border-ink-tertiary hover:text-ink-primary active:scale-[0.94]"
                 >
                   <svg className="h-[16px] w-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -80,32 +120,73 @@ export function MessageSheet({ open, onClose, to, subject, onSent }: MessageShee
                   </svg>
                 </button>
               </div>
-              <div className="mb-3 text-[12px] leading-relaxed text-ink-secondary">
-                Co Ci się spodobało, co przeszkadza, co byś dodał? Treść trafi do nas mailem — możesz formatować
-                tekst, dodać listę kroków lub cytat.
+              {status !== 'sent' && (
+                <div className="mb-3 text-[12px] leading-relaxed text-ink-secondary">
+                  Co Ci się spodobało, co przeszkadza, co byś dodał? Wiadomość pójdzie prosto na naszą skrzynkę
+                  — bez otwierania klienta poczty.
+                </div>
+              )}
+            </div>
+
+            {status === 'sent' ? (
+              <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-bg-base">
+                  <Check className="h-6 w-6" strokeWidth={2.4} />
+                </div>
+                <div className="font-serif text-[22px] tracking-[-0.01em]">Wysłano</div>
+                <div className="mt-1 max-w-[280px] text-[13px] leading-relaxed text-ink-secondary">
+                  Dzięki! Odezwiemy się jak tylko damy radę.
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto px-5 pb-2">
+                  <RichTextEditor
+                    value={html}
+                    onChange={setHtml}
+                    placeholder="Cześć, chciałem podzielić się…"
+                    maxLength={MAX_CHARS}
+                    autoFocus
+                  />
 
-            <div className="flex-1 overflow-y-auto px-5 pb-2">
-              <RichTextEditor
-                value={html}
-                onChange={setHtml}
-                placeholder="Cześć, chciałem podzielić się…"
-                maxLength={MAX_CHARS}
-                autoFocus
-              />
-            </div>
+                  {status === 'error' && errorMsg && (
+                    <div className="mt-3 rounded-md border border-alert/30 bg-alert-soft/60 px-4 py-3 text-[12px] leading-relaxed text-alert">
+                      <div className="mb-1 font-medium">Nie udało się wysłać</div>
+                      <div className="text-ink-secondary">{errorMsg}</div>
+                      {fallbackTo && (
+                        <button
+                          type="button"
+                          onClick={tryMailtoFallback}
+                          className="mt-2 underline underline-offset-2 hover:text-ink-primary"
+                        >
+                          Spróbuj wysłać mailem
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-            <div className="flex-shrink-0 px-5 pb-8 pt-3">
-              <button
-                onClick={handleSend}
-                disabled={isEmpty}
-                className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-accent px-5 py-[17px] text-[15px] font-medium text-bg-base transition-all hover:bg-accent-hover active:scale-[0.98] disabled:opacity-40 disabled:hover:bg-accent"
-              >
-                <Send className="h-[16px] w-[16px]" strokeWidth={1.8} />
-                Wyślij wiadomość
-              </button>
-            </div>
+                <div className="flex-shrink-0 px-5 pb-8 pt-3">
+                  <button
+                    onClick={handleSend}
+                    disabled={isEmpty || status === 'sending'}
+                    className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-accent px-5 py-[17px] text-[15px] font-medium text-bg-base transition-all hover:bg-accent-hover active:scale-[0.98] disabled:opacity-40 disabled:hover:bg-accent"
+                  >
+                    {status === 'sending' ? (
+                      <>
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-bg-base/30 border-t-bg-base" />
+                        Wysyłanie…
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-[16px] w-[16px]" strokeWidth={1.8} />
+                        Wyślij wiadomość
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </motion.div>
         </motion.div>
       )}

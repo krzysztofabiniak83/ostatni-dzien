@@ -63,6 +63,23 @@ Sekcje 1–9 to brief produktowo/designerski.
 - **Calm/minimal, editorial** — żadnych fioletowych gradientów ani „modern AI aesthetics". Akcent ciemnej zieleni (`#1F3D33`), stan krytyczny terakotowy (`#B85C3C`).
 - **`prefers-reduced-motion` respektowane wszędzie** — pulse-ring, scan-line, success animations są wyłączane.
 
+## Konfiguracja: wysyłka wiadomości in-app (Resend)
+
+Wiadomości z **Ustawienia → Napisz do nas** lecą prosto na skrzynkę bez otwierania klienta poczty (serverless function `api/send-feedback.ts` + [Resend](https://resend.com)).
+
+Setup jednorazowy:
+
+1. Załóż konto na **https://resend.com** (free tier: 3000 maili/mc, 100/dzień).
+2. **API Keys** → **Create API Key** → kopiuj klucz `re_…`.
+3. W Vercel: **Project → Settings → Environment Variables** → dodaj:
+   - `RESEND_API_KEY` = `re_xxx` (Production + Preview + Development)
+   - (opcjonalnie) `FEEDBACK_TO_EMAIL` = `twój@email.pl` — domyślnie `krzysztofabiniak@gmail.com`
+4. **Redeploy** (Vercel automatycznie po następnym pushu).
+
+Bez konfiguracji klucza endpoint zwróci 500 z czytelnym komunikatem, a frontend pokaże fallback „Spróbuj wysłać mailem" (otwiera natywny mailto).
+
+Wysyłka idzie z `onboarding@resend.dev` (free, bez weryfikacji domeny). W produkcji podmień na własną domenę w Resend → Domains, potem ustaw `FEEDBACK_FROM_EMAIL`.
+
 ## Roadmapa post-MVP
 
 Po walidacji: integracja Gmail/Outlook, prawdziwe OCR (jeśli walidacja powie że trzeba), prawdziwa apka mobilna (Capacitor lub React Native), backend (auth + sync), monetyzacja.
