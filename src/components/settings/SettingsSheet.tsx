@@ -1,10 +1,12 @@
 import type { PanInfo } from 'framer-motion'
 import type { ComponentType } from 'react'
+import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
-import { LifeBuoy, Mail } from 'lucide-react'
+import { LifeBuoy, Mail, MessageSquare } from 'lucide-react'
 import { Toggle } from '../ui/Toggle'
+import { MessageSheet } from './MessageSheet'
 import { useSettings, type Currency, type ReminderDays } from '../../store/settings'
 import { useOnboarding } from '../../store/onboarding'
 
@@ -122,6 +124,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   const navigate = useNavigate()
   const { notify, reminderDays, currency, setNotify, setReminderDays, setCurrency } = useSettings()
   const resetOnboarding = useOnboarding((s) => s.reset)
+  const [messageOpen, setMessageOpen] = useState(false)
 
   const handleRestartOnboarding = () => {
     onClose()
@@ -240,8 +243,15 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                       icon={LifeBuoy}
                     />
                   </div>
+                  <div className="border-b border-hairline">
+                    <NavRow
+                      label="Napisz do nas wiadomość"
+                      onClick={() => setMessageOpen(true)}
+                      icon={MessageSquare}
+                    />
+                  </div>
                   <NavRow
-                    label="Znalazłeś błąd lub masz pomysł?"
+                    label="Znalazłeś błąd? Napisz mailem"
                     href={feedbackHref}
                     onClick={onClose}
                     icon={Mail}
@@ -268,6 +278,13 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
           </motion.div>
         </motion.div>
       )}
+
+      <MessageSheet
+        open={messageOpen}
+        onClose={() => setMessageOpen(false)}
+        to={FEEDBACK_EMAIL}
+        subject="Wiadomość – Ostatni Dzień"
+      />
     </AnimatePresence>
   )
 }
