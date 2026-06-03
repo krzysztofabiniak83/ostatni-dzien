@@ -59,25 +59,26 @@ function SectionLabel({ children }: { children: string }) {
 function NavRow({
   label,
   onClick,
+  href,
   disabled,
   badge,
   icon: Icon,
 }: {
   label: string
   onClick?: () => void
+  /** Jeśli ustawione → render jako anchor (np. mailto: otwiera natywnego klienta poczty). */
+  href?: string
   disabled?: boolean
   badge?: string
   icon?: ComponentType<{ className?: string; strokeWidth?: number }>
 }) {
-  return (
-    <button
-      onClick={disabled ? undefined : onClick}
-      disabled={disabled}
-      className={clsx(
-        'flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-[14px] transition-colors',
-        disabled ? 'cursor-not-allowed text-ink-tertiary' : 'text-ink-primary hover:bg-bg-subtle',
-      )}
-    >
+  const className = clsx(
+    'flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-[14px] transition-colors',
+    disabled ? 'cursor-not-allowed text-ink-tertiary' : 'text-ink-primary hover:bg-bg-subtle',
+  )
+
+  const inner = (
+    <>
       <span className="flex min-w-0 items-center gap-3">
         {Icon && (
           <Icon
@@ -97,6 +98,22 @@ function NavRow({
       ) : (
         <span className="flex-shrink-0 text-[16px] text-ink-tertiary">›</span>
       )}
+    </>
+  )
+
+  // mailto: i podobne — anchor jest naturalnym targetem dla browsera
+  // (otwiera natywnego klienta zamiast nawigować w nowej karcie).
+  if (href && !disabled) {
+    return (
+      <a href={href} className={className} onClick={onClick}>
+        {inner}
+      </a>
+    )
+  }
+
+  return (
+    <button onClick={disabled ? undefined : onClick} disabled={disabled} className={className}>
+      {inner}
     </button>
   )
 }
@@ -112,10 +129,9 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
     navigate('/onboarding', { replace: true })
   }
 
-  const handleFeedback = () => {
-    const subject = encodeURIComponent('Feedback – MVP Ostatni Dzień')
-    window.location.href = `mailto:${FEEDBACK_EMAIL}?subject=${subject}`
-  }
+  const feedbackHref = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(
+    'Feedback – MVP Ostatni Dzień',
+  )}`
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 80) onClose()
@@ -224,7 +240,12 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                       icon={LifeBuoy}
                     />
                   </div>
-                  <NavRow label="Znalazłeś błąd lub masz pomysł?" onClick={handleFeedback} icon={Mail} />
+                  <NavRow
+                    label="Znalazłeś błąd lub masz pomysł?"
+                    href={feedbackHref}
+                    onClick={onClose}
+                    icon={Mail}
+                  />
                 </div>
               </div>
 

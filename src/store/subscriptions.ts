@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { Subscription, SubscriptionType } from '../types/subscription'
 import { MOCK_SUBSCRIPTIONS } from '../data/mock'
 import { useNotifications } from './notifications'
+import { formatAmount, parseAmountInput } from '../utils/currency'
 
 export interface NewSubscriptionInput {
   name: string
@@ -49,7 +50,8 @@ export const useSubscriptions = create<SubscriptionsState>()(
         const id = `user-${Date.now()}`
         const isTrial = input.type === 'trial'
         const name = input.name.trim() || 'Nowa subskrypcja'
-        const amount = input.amount.trim() || '—'
+        // Parsujemy kwotę z inputu (np. "29,99 zł") na grosze; nie udało się → 0.
+        const amountPLN = parseAmountInput(input.amount) ?? 0
         const sub: Subscription = {
           id,
           name,
@@ -57,26 +59,40 @@ export const useSubscriptions = create<SubscriptionsState>()(
           logoText: (name[0] || '?').toUpperCase(),
           daysUntil: 14,
           date: input.date.trim() || '—',
-          amount,
+          amountPLN,
           period: isTrial ? 'po próbie, potem miesięcznie' : 'miesięcznie',
           periodShort: isTrial ? 'po próbie' : 'miesięcznie',
           type: input.type,
           urgency: 'normal',
           section: 'month',
           chartHeights: [0, 0, 0, 0, 0, 4],
-          chartTotal: '0 zł',
+          chartTotalPLN: 0,
         }
         set((state) => ({
           subscriptions: [sub, ...state.subscriptions],
           lastAddedId: id,
         }))
+        // Powiadomienie potwierdzające — kwoty w obecnej walucie z ustawień.
+        // Czytamy walutę bezpośrednio z localStorage (nie ma hooków w storze).
+        let currency: 'PLN' | 'EUR' | 'USD' = 'PLN'
+        try {
+          const raw = JSON.parse(localStorage.getItem('ostatni-dzien-settings') || '{}')
+          if (raw?.state?.currency) currency = raw.state.currency
+        } catch {
+          // ignore
+        }
+        const RATES: Record<typeof currency, number> = { PLN: 1, EUR: 0.2336, USD: 0.2519 }
+        const formatted = formatAmount(
+          currency === 'PLN' ? amountPLN : Math.round(amountPLN * RATES[currency]),
+          currency,
+        )
         useNotifications.getState().push({
           type: 'info',
           iconSystem: 'check',
           title: `${name}: Dodano do listy`,
           subtitle: isTrial
-            ? `Pierwsza opłata ${amount} po próbie. Przypomnimy zanim pobiorą środki.`
-            : `Pobranie ${amount}. Przypomnimy zanim pobiorą środki.`,
+            ? `Pierwsza opłata ${formatted} po próbie. Przypomnimy zanim pobiorą środki.`
+            : `Pobranie ${formatted}. Przypomnimy zanim pobiorą środki.`,
           subId: id,
         })
         return id

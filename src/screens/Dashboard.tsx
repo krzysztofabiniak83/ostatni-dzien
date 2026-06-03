@@ -11,6 +11,7 @@ import { useSubscriptions } from '../store/subscriptions'
 import { useSettings } from '../store/settings'
 import { useNotifications } from '../store/notifications'
 import { buildPaymentAlerts } from '../utils/notifications'
+import { useFormatAmount } from '../utils/currency'
 import type { Section, Subscription } from '../types/subscription'
 
 const SECTIONS: { key: Section; label: string }[] = [
@@ -20,7 +21,6 @@ const SECTIONS: { key: Section; label: string }[] = [
   { key: 'later', label: 'Później' },
 ]
 
-const MONTH_TOTAL = '434,96 zł'
 
 function IconButton({
   children,
@@ -59,14 +59,20 @@ export function Dashboard() {
   const reminderDays = useSettings((s) => s.reminderDays)
   const pushNotification = useNotifications((s) => s.push)
   const navigate = useNavigate()
+  const fmt = useFormatAmount()
+
+  // Suma wszystkich subskrypcji "w tym miesiącu" — w groszach PLN.
+  const monthTotalPLN = subscriptions.reduce((sum, s) => sum + s.amountPLN, 0)
 
   // Sprawdź alerty płatności przy mount + zmianach (subscriptions / reminderDays / notify).
   // Dedup po metaKey w store — nie duplikujemy alertu dla tej samej subskrypcji w tym samym dniu.
   useEffect(() => {
     if (!notify) return
-    const alerts = buildPaymentAlerts(subscriptions, reminderDays)
+    const alerts = buildPaymentAlerts(subscriptions, reminderDays, fmt)
     alerts.forEach((a) => pushNotification(a))
-  }, [subscriptions, reminderDays, notify, pushNotification])
+    // `fmt` zmienia się przy zmianie waluty — dedup po metaKey i tak zatrzyma stare,
+    // ale nowe wystąpienia (po przełączeniu waluty) i tak nie zmienią starych subtitle.
+  }, [subscriptions, reminderDays, notify, pushNotification, fmt])
 
   // Po onboardingu CTA z ostatniego slajdu zostawia flagę w sessionStorage
   // (przeżywa redirect, nie przeżywa zamknięcia karty).
@@ -146,7 +152,7 @@ export function Dashboard() {
           <div className="font-serif text-[36px] font-light leading-[1.05] tracking-[-0.02em] text-ink-primary">
             <strong className="font-medium">{subscriptions.length} subskrypcji</strong>
             <br />
-            <em className="italic text-accent">{MONTH_TOTAL}</em> w tym miesiącu
+            <em className="italic text-accent">{fmt(monthTotalPLN)}</em> w tym miesiącu
           </div>
         </div>
       </div>
