@@ -1,9 +1,11 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 import type { Subscription, SubscriptionType } from '../types/subscription'
 import { MOCK_SUBSCRIPTIONS } from '../data/mock'
 import { useNotifications } from './notifications'
+import { useSettings } from './settings'
 import { formatAmount, parseAmountInput } from '../utils/currency'
+import { supabase } from '../lib/supabase'
+import { subFromRow, subToRow } from '../lib/mappers'
 
 export interface NewSubscriptionInput {
   name: string
@@ -14,116 +16,119 @@ export interface NewSubscriptionInput {
 
 interface SubscriptionsState {
   subscriptions: Subscription[]
+  loaded: boolean
   /** Id ostatnio dodanej subskrypcji — do podświetlenia karty na dashboardzie. */
   lastAddedId: string | null
   getById: (id: string) => Subscription | undefined
-  remove: (id: string) => void
-  addSubscription: (input: NewSubscriptionInput) => string
+  remove: (id: string) => Promise<void>
+  addSubscription: (input: NewSubscriptionInput) => Promise<string>
   clearLastAdded: () => void
+  loadFromRemote: (userId: string) => Promise<void>
 }
 
 /**
- * Store subskrypcji z persystencją w localStorage (zustand persist).
- * Mock jest seedem przy pierwszym uruchomieniu; potem stan (add/remove) trwa
- * między odświeżeniami. Persystowane są tylko subskrypcje.
+ * Store subskrypcji synchronizowany z Supabase (tabela `subscriptions`).
+ * Pierwsze logowanie na nowym koncie seeduje MOCK_SUBSCRIPTIONS żeby UX
+ * nie pokazywał pustego dashboardu od razu.
  */
-export const useSubscriptions = create<SubscriptionsState>()(
-  persist(
-    (set, get) => ({
-      subscriptions: MOCK_SUBSCRIPTIONS,
-      lastAddedId: null,
-      getById: (id) => get().subscriptions.find((s) => s.id === id),
-      remove: (id) => {
-        const sub = get().subscriptions.find((s) => s.id === id)
-        set((state) => ({ subscriptions: state.subscriptions.filter((s) => s.id !== id) }))
-        if (sub) {
-          // Brak subId — usunięcie znaczy że już nie ma do czego nawigować.
-          useNotifications.getState().push({
-            type: 'info',
-            iconSystem: 'trash',
-            title: `${sub.name}: Usunięto z listy`,
-            subtitle: 'Subskrypcja zniknęła z aplikacji — nie wpływa to na samą usługę.',
-          })
-        }
-      },
-      addSubscription: (input) => {
-        const id = `user-${Date.now()}`
-        const isTrial = input.type === 'trial'
-        const name = input.name.trim() || 'Nowa subskrypcja'
-        // Parsujemy kwotę z inputu (np. "29,99 zł") na grosze; nie udało się → 0.
-        const amountPLN = parseAmountInput(input.amount) ?? 0
-        const sub: Subscription = {
-          id,
-          name,
-          logoClass: '',
-          logoText: (name[0] || '?').toUpperCase(),
-          daysUntil: 14,
-          date: input.date.trim() || '—',
-          amountPLN,
-          period: isTrial ? 'po próbie, potem miesięcznie' : 'miesięcznie',
-          periodShort: isTrial ? 'po próbie' : 'miesięcznie',
-          type: input.type,
-          urgency: 'normal',
-          section: 'month',
-          chartHeights: [0, 0, 0, 0, 0, 4],
-          chartTotalPLN: 0,
-        }
+export const useSubscriptions = create<SubscriptionsState>()((set, get) => ({
+  subscriptions: [],
+  loaded: false,
+  lastAddedId: null,
+  getById: (id) => get().subscriptions.find((s) => s.id === id),
+  remove: async (id) => {
+    const sub = get().subscriptions.find((s) => s.id === id)
+    set((state) => ({ subscriptions: state.subscriptions.filter((s) => s.id !== id) }))
+    if (sub) {
+      useNotifications.getState().push({
+        type: 'info',
+        iconSystem: 'trash',
+        title: `${sub.name}: Usunięto z listy`,
+        subtitle: 'Subskrypcja zniknęła z aplikacji — nie wpływa to na samą usługę.',
+      })
+    }
+    const userId = (await supabase.auth.getUser()).data.user?.id
+    if (!userId) return
+    await supabase.from('subscriptions').delete().eq('user_id', userId).eq('id', id)
+  },
+  addSubscription: async (input) => {
+    const id = `user-${Date.now()}`
+    const isTrial = input.type === 'trial'
+    const name = input.name.trim() || 'Nowa subskrypcja'
+    // Parsujemy kwotę z inputu (np. "29,99 zł") na grosze; nie udało się → 0.
+    const amountPLN = parseAmountInput(input.amount) ?? 0
+    const sub: Subscription = {
+      id,
+      name,
+      logoClass: '',
+      logoText: (name[0] || '?').toUpperCase(),
+      daysUntil: 14,
+      date: input.date.trim() || '—',
+      amountPLN,
+      period: isTrial ? 'po próbie, potem miesięcznie' : 'miesięcznie',
+      periodShort: isTrial ? 'po próbie' : 'miesięcznie',
+      type: input.type,
+      urgency: 'normal',
+      section: 'month',
+      chartHeights: [0, 0, 0, 0, 0, 4],
+      chartTotalPLN: 0,
+    }
+    set((state) => ({
+      subscriptions: [sub, ...state.subscriptions],
+      lastAddedId: id,
+    }))
+    // Powiadomienie potwierdzające w aktualnej walucie z ustawień.
+    const currency = useSettings.getState().currency
+    const RATES: Record<typeof currency, number> = { PLN: 1, EUR: 0.2336, USD: 0.2519 }
+    const formatted = formatAmount(
+      currency === 'PLN' ? amountPLN : Math.round(amountPLN * RATES[currency]),
+      currency,
+    )
+    useNotifications.getState().push({
+      type: 'info',
+      iconSystem: 'check',
+      title: `${name}: Dodano do listy`,
+      subtitle: isTrial
+        ? `Pierwsza opłata ${formatted} po próbie. Przypomnimy zanim pobiorą środki.`
+        : `Pobranie ${formatted}. Przypomnimy zanim pobiorą środki.`,
+      subId: id,
+    })
+    // Insert do Supabase. Jeśli błąd → rollback lokalnie + krytyczne powiadomienie.
+    const userId = (await supabase.auth.getUser()).data.user?.id
+    if (userId) {
+      const { error } = await supabase.from('subscriptions').insert(subToRow(sub, userId))
+      if (error) {
         set((state) => ({
-          subscriptions: [sub, ...state.subscriptions],
-          lastAddedId: id,
+          subscriptions: state.subscriptions.filter((s) => s.id !== id),
+          lastAddedId: null,
         }))
-        // Powiadomienie potwierdzające — kwoty w obecnej walucie z ustawień.
-        // Czytamy walutę bezpośrednio z localStorage (nie ma hooków w storze).
-        let currency: 'PLN' | 'EUR' | 'USD' = 'PLN'
-        try {
-          const raw = JSON.parse(localStorage.getItem('ostatni-dzien-settings') || '{}')
-          if (raw?.state?.currency) currency = raw.state.currency
-        } catch {
-          // ignore
-        }
-        const RATES: Record<typeof currency, number> = { PLN: 1, EUR: 0.2336, USD: 0.2519 }
-        const formatted = formatAmount(
-          currency === 'PLN' ? amountPLN : Math.round(amountPLN * RATES[currency]),
-          currency,
-        )
         useNotifications.getState().push({
-          type: 'info',
-          iconSystem: 'check',
-          title: `${name}: Dodano do listy`,
-          subtitle: isTrial
-            ? `Pierwsza opłata ${formatted} po próbie. Przypomnimy zanim pobiorą środki.`
-            : `Pobranie ${formatted}. Przypomnimy zanim pobiorą środki.`,
-          subId: id,
+          type: 'critical',
+          title: 'Nie udało się zapisać subskrypcji',
+          subtitle: error.message,
         })
-        return id
-      },
-      clearLastAdded: () => set({ lastAddedId: null }),
-    }),
-    {
-      name: 'ostatni-dzien-subs',
-      version: 1,
-      // Migracja v0 → v1: kwoty trzymane wcześniej jako string (np. "67,00 zł")
-      // konwertujemy na liczby w groszach (`amountPLN`, `chartTotalPLN`).
-      // Bez tego stary localStorage powodował NaN po podpięciu waluty.
-      migrate: (persisted) => {
-        type LegacySub = Partial<Subscription> & { amount?: string; chartTotal?: string }
-        const state = (persisted ?? {}) as { subscriptions?: LegacySub[] }
-        const list = Array.isArray(state.subscriptions) ? state.subscriptions : []
-        const migrated: Subscription[] = list.map((sub) => {
-          const amountPLN =
-            typeof sub.amountPLN === 'number' && Number.isFinite(sub.amountPLN)
-              ? sub.amountPLN
-              : (parseAmountInput(sub.amount ?? '') ?? 0)
-          const chartTotalPLN =
-            typeof sub.chartTotalPLN === 'number' && Number.isFinite(sub.chartTotalPLN)
-              ? sub.chartTotalPLN
-              : (parseAmountInput(sub.chartTotal ?? '') ?? 0)
-          const { amount: _a, chartTotal: _c, ...rest } = sub
-          return { ...(rest as Subscription), amountPLN, chartTotalPLN }
-        })
-        return { subscriptions: migrated.length > 0 ? migrated : MOCK_SUBSCRIPTIONS }
-      },
-      partialize: (state) => ({ subscriptions: state.subscriptions }),
-    },
-  ),
-)
+      }
+    }
+    return id
+  },
+  clearLastAdded: () => set({ lastAddedId: null }),
+  loadFromRemote: async (userId) => {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    if (error) {
+      set({ loaded: true })
+      return
+    }
+    if (!data || data.length === 0) {
+      // Pierwsze logowanie — seed mock danymi, żeby dashboard nie był pusty.
+      const rows = MOCK_SUBSCRIPTIONS.map((s) => subToRow(s, userId))
+      await supabase.from('subscriptions').upsert(rows, { onConflict: 'id' })
+      set({ subscriptions: MOCK_SUBSCRIPTIONS, loaded: true })
+      return
+    }
+    set({ subscriptions: data.map(subFromRow), loaded: true })
+  },
+}))

@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
-import { LifeBuoy, Mail, MessageSquare } from 'lucide-react'
+import { LifeBuoy, LogOut, Mail, MessageSquare } from 'lucide-react'
+import { signOut } from '../../lib/auth'
 import { Toggle } from '../ui/Toggle'
 import { MessageSheet } from './MessageSheet'
 import { useSettings, type Currency, type ReminderDays } from '../../store/settings'
@@ -268,6 +269,22 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                   </div>
                   <NavRow label="Regulamin" disabled badge="Wkrótce" />
                 </div>
+              </div>
+
+              {/* Sekcja 5: Konto */}
+              <div className="mb-6">
+                <SectionLabel>Konto</SectionLabel>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose()
+                    void signOut()
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-alert px-5 py-4 text-[15px] font-medium text-white transition-all duration-150 hover:brightness-95 active:scale-[0.98]"
+                >
+                  <LogOut className="h-[18px] w-[18px]" strokeWidth={2} />
+                  Wyloguj się
+                </button>
               </div>
 
               {/* Stopka */}
