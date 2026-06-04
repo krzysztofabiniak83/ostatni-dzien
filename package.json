@@ -13,6 +13,7 @@
     "@fontsource/fraunces": "^5.2.9",
     "@fontsource/geist-mono": "^5.2.8",
     "@fontsource/geist-sans": "^5.2.5",
+    "@supabase/supabase-js": "^2.107.0",
     "@tiptap/extension-character-count": "^3.25.0",
     "@tiptap/extension-placeholder": "^3.25.0",
     "@tiptap/react": "^3.25.0",

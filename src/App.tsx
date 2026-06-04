@@ -4,7 +4,10 @@ import { PhoneFrame } from './components/layout/PhoneFrame'
 import { Dashboard } from './screens/Dashboard'
 import { Action } from './screens/Action'
 import { Onboarding } from './screens/Onboarding'
+import { SignIn } from './screens/SignIn'
 import { useOnboarding } from './store/onboarding'
+import { useAuth } from './lib/auth'
+import { AuthGate } from './components/AuthGate'
 
 // Przejście fade+scale — cubic-bezier z CLAUDE.md (decyzje produktowe).
 const EASE = [0.32, 0.72, 0, 1] as const
@@ -40,21 +43,44 @@ function AnimatedRoutes() {
   )
 }
 
-function App() {
+function LoadingScreen() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-bg-base">
+      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+        Ładuję…
+      </p>
+    </div>
+  )
+}
+
+function AppBody() {
+  const { session, user } = useAuth()
+
+  if (session === undefined) return <LoadingScreen />
+  if (!session || !user) return <SignIn />
+
   return (
     <BrowserRouter>
-      <PhoneFrame
-        label="Ostatni Dzień · MVP"
-        caption={
-          <>
-            Prototyp przeglądarkowy. Wrzuć screenshot albo dodaj subskrypcję ręcznie — przypomnimy Ci o pobraniu
-            zanim się zorientujesz.
-          </>
-        }
-      >
+      <AuthGate userId={user.id} fallback={<LoadingScreen />}>
         <AnimatedRoutes />
-      </PhoneFrame>
+      </AuthGate>
     </BrowserRouter>
+  )
+}
+
+function App() {
+  return (
+    <PhoneFrame
+      label="Ostatni Dzień · MVP"
+      caption={
+        <>
+          Prototyp przeglądarkowy. Wrzuć screenshot albo dodaj subskrypcję ręcznie — przypomnimy Ci o pobraniu
+          zanim się zorientujesz.
+        </>
+      }
+    >
+      <AppBody />
+    </PhoneFrame>
   )
 }
 
