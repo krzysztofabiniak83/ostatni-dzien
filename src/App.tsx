@@ -4,6 +4,7 @@ import { PhoneFrame } from './components/layout/PhoneFrame'
 import { Dashboard } from './screens/Dashboard'
 import { Action } from './screens/Action'
 import { Onboarding } from './screens/Onboarding'
+import { Docs } from './screens/Docs'
 import { SignIn } from './screens/SignIn'
 import { useOnboarding } from './store/onboarding'
 import { useAuth } from './lib/auth'
@@ -69,6 +70,10 @@ function AppBody() {
 }
 
 function App() {
+  // /docs renderujemy bez PhoneFrame i bez auth (publiczna dokumentacja).
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')) {
+    return <Docs />
+  }
   return (
     <PhoneFrame
       label="Ostatni Dzień · MVP"

@@ -267,7 +267,10 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                   <div className="border-b border-hairline">
                     <NavRow label="Polityka prywatności" disabled badge="Wkrótce" />
                   </div>
-                  <NavRow label="Regulamin" disabled badge="Wkrótce" />
+                  <div className="border-b border-hairline">
+                    <NavRow label="Regulamin" disabled badge="Wkrótce" />
+                  </div>
+                  <NavRow label="Dokumentacja API" href="/docs" />
                 </div>
               </div>
 
