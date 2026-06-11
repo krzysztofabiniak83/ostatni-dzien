@@ -5,6 +5,8 @@ import { SectionDivider } from '../components/layout/SectionDivider'
 import { StatusBar } from '../components/layout/StatusBar'
 import { Toast } from '../components/ui/Toast'
 import { SmartInputFlow } from '../components/smartinput/SmartInputFlow'
+import { AskBar } from '../components/chat/AskBar'
+import { ChatSheet } from '../components/chat/ChatSheet'
 import { SettingsSheet } from '../components/settings/SettingsSheet'
 import { NotificationsSheet } from '../components/notifications/NotificationsSheet'
 import { useSubscriptions } from '../store/subscriptions'
@@ -93,6 +95,8 @@ export function Dashboard() {
   // Badge sygnalizuje świeże powiadomienie (tylko najnowsze decyduje, zgodnie z hierarchią listy).
   const hasFreshNotification = useNotifications((s) => Boolean(s.items[0] && !s.items[0].read))
   const [toast, setToast] = useState<string | null>(null)
+  const [askValue, setAskValue] = useState('')
+  const [chatOpen, setChatOpen] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
   const bySection = (key: Section): Subscription[] =>
@@ -186,17 +190,36 @@ export function Dashboard() {
         style={{ background: 'linear-gradient(to top, #F5F3EE 30%, transparent)' }}
       />
 
-      {/* FAB — otwiera Smart Input */}
-      <button
-        aria-label="Dodaj subskrypcję"
-        onClick={() => setAdding(true)}
-        className="absolute bottom-8 right-6 z-50 flex h-[60px] w-[60px] items-center justify-center rounded-full bg-accent text-bg-base transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent-hover active:scale-[0.94]"
-        style={{ boxShadow: '0 12px 28px -8px rgba(31,61,51,0.5), 0 4px 12px -4px rgba(31,61,51,0.3)' }}
+      {/* Asymmetric bottom layout: AskBar (75%) + FAB (25%) */}
+      <div
+        className="absolute bottom-0 left-0 right-0 z-50 flex items-end gap-3 px-4 pb-[max(env(safe-area-inset-bottom,16px),16px)]"
       >
-        <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </button>
+        <div className="min-w-0 flex-1">
+          <AskBar
+            value={askValue}
+            onChange={setAskValue}
+            onFocus={() => setChatOpen(true)}
+            onSubmit={() => setChatOpen(true)}
+          />
+        </div>
+        <button
+          aria-label="Dodaj subskrypcję"
+          onClick={() => setAdding(true)}
+          className="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-full bg-accent text-bg-base transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent-hover active:scale-[0.94]"
+          style={{ boxShadow: '0 12px 28px -8px rgba(31,61,51,0.5), 0 4px 12px -4px rgba(31,61,51,0.3)' }}
+        >
+          <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </div>
+
+      <ChatSheet
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        value={askValue}
+        onChange={setAskValue}
+      />
 
       {adding && <SmartInputFlow onExit={() => setAdding(false)} onToast={flashToast} />}
 
