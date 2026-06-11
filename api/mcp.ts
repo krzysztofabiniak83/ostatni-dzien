@@ -9,6 +9,8 @@ import { formatSubDate, sectionFor, urgencyFor } from './_shared/format.js'
  * Trzy toole CRUD — bez `ask_agent`, żeby nie wlatywały w limit /api/ask.
  */
 
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+
 export const config = { runtime: 'nodejs' }
 
 type ToolResult = {
@@ -176,7 +178,7 @@ const baseHandler = createMcpHandler(
   },
 )
 
-const handler = withMcpAuth(
+const fetchHandler = withMcpAuth(
   baseHandler,
   async (_req, bearerToken) => {
     if (!bearerToken) return undefined
@@ -191,4 +193,37 @@ const handler = withMcpAuth(
   { required: true },
 )
 
-export default handler
+/**
+ * Vercel Node functions wołają handler ze stylem (req, res) z Node IncomingMessage.
+ * mcp-handler oczekuje Web Fetch Request → Response. Konwertujemy w obie strony.
+ */
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const host = req.headers.host ?? 'localhost'
+  const protocol = (req.headers['x-forwarded-proto'] as string | undefined) ?? 'https'
+  const url = `${protocol}://${host}${req.url ?? '/api/mcp'}`
+
+  const headers = new Headers()
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (Array.isArray(v)) v.forEach((vv) => headers.append(k, vv))
+    else if (typeof v === 'string') headers.set(k, v)
+  }
+
+  const method = req.method ?? 'GET'
+  // Body: Vercel parsuje JSON do req.body — serializujemy z powrotem dla Request.
+  let body: BodyInit | undefined
+  if (method !== 'GET' && method !== 'HEAD') {
+    if (req.body == null) body = undefined
+    else if (typeof req.body === 'string') body = req.body
+    else if (Buffer.isBuffer(req.body)) body = req.body
+    else body = JSON.stringify(req.body)
+    if (body && !headers.has('content-type')) headers.set('content-type', 'application/json')
+  }
+
+  const request = new Request(url, { method, headers, body })
+  const response = await fetchHandler(request)
+
+  res.status(response.status)
+  response.headers.forEach((value, key) => res.setHeader(key, value))
+  const buf = Buffer.from(await response.arrayBuffer())
+  res.end(buf)
+}
