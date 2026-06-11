@@ -10,6 +10,8 @@ import { Toggle } from '../ui/Toggle'
 import { MessageSheet } from './MessageSheet'
 import { useSettings, type Currency, type ReminderDays } from '../../store/settings'
 import { useOnboarding } from '../../store/onboarding'
+import { useSubscriptions } from '../../store/subscriptions'
+import { useNotifications } from '../../store/notifications'
 
 interface SettingsSheetProps {
   open: boolean
@@ -269,6 +271,29 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                   </div>
                   <NavRow label="Regulamin" disabled badge="Wkrótce" />
                 </div>
+              </div>
+
+              {/* Sekcja: Demo */}
+              <div className="mb-6">
+                <SectionLabel>Dane demo</SectionLabel>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await useSubscriptions.getState().reseedDemo()
+                    useNotifications.getState().push({
+                      type: 'info',
+                      title: 'Załadowano subskrypcje demo',
+                      subtitle: '9 przykładowych subskrypcji z prawdziwymi logo zostało dodanych.',
+                    })
+                    onClose()
+                  }}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-hairline bg-bg-card px-5 py-4 text-[14px] font-medium text-ink-primary transition-all duration-150 hover:border-accent hover:text-accent active:scale-[0.98]"
+                >
+                  Załaduj subskrypcje demo
+                </button>
+                <p className="mt-2 px-1 text-[12px] text-ink-tertiary">
+                  Zastąpi obecną listę 9 przykładowymi subskrypcjami (Adobe z statusem „Uwaga”, Netflix, Disney+, ChatGPT i inne).
+                </p>
               </div>
 
               {/* Sekcja 5: Konto */}

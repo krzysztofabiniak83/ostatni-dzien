@@ -23,6 +23,7 @@ interface SubscriptionsState {
   remove: (id: string) => Promise<void>
   addSubscription: (input: NewSubscriptionInput) => Promise<string>
   clearLastAdded: () => void
+  reseedDemo: () => Promise<void>
   loadFromRemote: (userId: string) => Promise<void>
 }
 
@@ -112,6 +113,16 @@ export const useSubscriptions = create<SubscriptionsState>()((set, get) => ({
     return id
   },
   clearLastAdded: () => set({ lastAddedId: null }),
+  /** Czyści bieżące subskrypcje (w Supabase + store) i ładuje ponownie MOCK_SUBSCRIPTIONS.
+   *  Używane z Ustawień jako "Załaduj subskrypcje demo". */
+  reseedDemo: async () => {
+    const userId = (await supabase.auth.getUser()).data.user?.id
+    if (!userId) return
+    await supabase.from('subscriptions').delete().eq('user_id', userId)
+    const rows = MOCK_SUBSCRIPTIONS.map((s) => subToRow(s, userId))
+    await supabase.from('subscriptions').upsert(rows, { onConflict: 'id' })
+    set({ subscriptions: MOCK_SUBSCRIPTIONS, lastAddedId: null })
+  },
   loadFromRemote: async (userId) => {
     const { data, error } = await supabase
       .from('subscriptions')

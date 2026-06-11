@@ -31,7 +31,8 @@
       "Bash(curl -sS -X POST https://ostatni-dzien.vercel.app/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"test\"}]}' -o /tmp/_r -w '%{http_code}')",
       "Bash(git commit -m 'fix\\(subskrypcik\\): co-locate market data with api function *)",
       "mcp__73977f6b-96b7-47a1-bcc1-a00c0a55c5e7__get_deployment_build_logs",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(curl -sSI https://ostatni-dzien.vercel.app/subskrypcik-avatar.png)"
     ]
   }
 }
