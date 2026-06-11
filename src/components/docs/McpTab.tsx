@@ -136,6 +136,15 @@ export function McpTab() {
             description="Zwraca aktywne i zapauzowane subskrypcje, posortowane po dniach do najbliższego pobrania."
           />
           <p className="text-[13.5px] text-ink-tertiary">Bez argumentów.</p>
+          <h4 className="mt-4 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+            Przykład odpowiedzi
+          </h4>
+          <Code language="json">{`{
+  "content": [{
+    "type": "text",
+    "text": "{ \\"subscriptions\\": [ { \\"id\\": \\"spotify\\", \\"name\\": \\"Spotify Family\\", \\"amountPLN\\": 29.99, \\"date\\": \\"6 czerwca · 8:00\\", \\"daysUntil\\": 6, \\"type\\": \\"renewal\\", \\"status\\": \\"active\\" } ] }"
+  }]
+}`}</Code>
 
           <ToolHeader
             name="add_subscription"
@@ -155,6 +164,27 @@ export function McpTab() {
               Domyślnie <InlineCode>"renewal"</InlineCode>.
             </ParamRow>
           </div>
+          <h4 className="mt-4 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+            Przykład wywołania
+          </h4>
+          <Code language="json">{`{
+  "name": "add_subscription",
+  "arguments": {
+    "name": "HBO Max",
+    "amountPLN": 31.99,
+    "daysUntil": 12,
+    "type": "renewal"
+  }
+}`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+            Przykład odpowiedzi
+          </h4>
+          <Code language="json">{`{
+  "content": [{
+    "type": "text",
+    "text": "{ \\"subscription\\": { \\"id\\": \\"user-1781200065271\\", \\"name\\": \\"HBO Max\\", \\"amountPLN\\": 31.99, \\"date\\": \\"23 czerwca · 9:00\\", \\"daysUntil\\": 12, \\"type\\": \\"renewal\\", \\"status\\": \\"active\\" } }"
+  }]
+}`}</Code>
 
           <ToolHeader
             name="update_subscription_status"
@@ -168,6 +198,42 @@ export function McpTab() {
               Docelowy status. <InlineCode>cancelled</InlineCode> nie usuwa wiersza fizycznie.
             </ParamRow>
           </div>
+          <h4 className="mt-4 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+            Przykład wywołania
+          </h4>
+          <Code language="json">{`{
+  "name": "update_subscription_status",
+  "arguments": { "id": "user-1781200065271", "status": "paused" }
+}`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+            Przykład odpowiedzi
+          </h4>
+          <Code language="json">{`{
+  "content": [{
+    "type": "text",
+    "text": "{ \\"subscription\\": { \\"id\\": \\"user-1781200065271\\", \\"name\\": \\"HBO Max\\", \\"status\\": \\"paused\\" } }"
+  }]
+}`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Błędy
+          </h3>
+          <ul className="space-y-2 text-[14px] leading-relaxed text-ink-secondary">
+            <li>
+              <InlineCode>401 unauthorized</InlineCode> — brak headera{' '}
+              <InlineCode>Authorization</InlineCode> albo token wygasł / nieważny.
+            </li>
+            <li>
+              <InlineCode>isError: true</InlineCode> w treści odpowiedzi tool call — błąd
+              biznesowy (np. <InlineCode>not_found</InlineCode> przy nieswoim id,{' '}
+              <InlineCode>invalid_body</InlineCode> przy pustym <InlineCode>name</InlineCode>).
+              Treść błędu jest w <InlineCode>content[0].text</InlineCode>.
+            </li>
+            <li>
+              Niepoprawne argumenty (zła nazwa pola, zły typ) → zwracane przez MCP SDK jako
+              błąd walidacji JSON-RPC <InlineCode>-32602</InlineCode>.
+            </li>
+          </ul>
 
           <h4 className="mt-8 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
             Surowy JSON-RPC (do debugowania)
