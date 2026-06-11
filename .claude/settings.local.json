@@ -15,7 +15,23 @@
       "Bash(sleep 2; cat /tmp/ghauth.log)",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git -c core.quotepath=false status)"
+      "Bash(git -c core.quotepath=false status)",
+      "mcp__4ffbf63c-a918-48af-ab2d-7685a64ccdb4__list_projects",
+      "mcp__4ffbf63c-a918-48af-ab2d-7685a64ccdb4__list_tables",
+      "Bash(git checkout *)",
+      "mcp__4ffbf63c-a918-48af-ab2d-7685a64ccdb4__apply_migration",
+      "Bash(curl -sS -o /dev/null -w \"HTTP %{http_code}\\\\n%{redirect_url}\\\\n\" -X POST https://ostatni-dzien-j1vxknxwz-kfabio-s-projects.vercel.app/api/chat -H \"Content-Type: application/json\" -d '{\"messages\":[{\"role\":\"user\",\"content\":\"test\"}]}')",
+      "Bash(curl -sSI https://ostatni-dzien-j1vxknxwz-kfabio-s-projects.vercel.app/api/chat)",
+      "Bash(curl -sSI https://ostatni-dzien.vercel.app/api/chat)",
+      "Bash(git merge *)",
+      "Bash(git push *)",
+      "Bash(curl -sS -X POST https://ostatni-dzien.vercel.app/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"test\"}]}' -i)",
+      "mcp__73977f6b-96b7-47a1-bcc1-a00c0a55c5e7__get_runtime_logs",
+      "Bash(git commit -m 'fix\\(subskrypcik\\): convert market.json to TS module for Node ESM compat *)",
+      "Bash(curl -sS -X POST https://ostatni-dzien.vercel.app/api/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"test\"}]}' -o /tmp/_r -w '%{http_code}')",
+      "Bash(git commit -m 'fix\\(subskrypcik\\): co-locate market data with api function *)",
+      "mcp__73977f6b-96b7-47a1-bcc1-a00c0a55c5e7__get_deployment_build_logs",
+      "Bash(git commit *)"
     ]
   }
 }

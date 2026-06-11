@@ -14,8 +14,14 @@ const CHIPS = [
 export function ActionChips({ onPick }: { onPick: (prompt: string) => void }) {
   return (
     <div
-      className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1"
-      style={{ scrollbarWidth: 'none' }}
+      className="action-chips -mx-4 mb-3 flex gap-2 overflow-x-auto overflow-y-hidden px-4 pb-1"
+      style={{
+        scrollbarWidth: 'none',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-x',
+        overscrollBehaviorX: 'contain',
+        cursor: 'grab',
+      }}
     >
       {CHIPS.map((c) => (
         <button

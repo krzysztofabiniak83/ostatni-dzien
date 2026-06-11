@@ -273,6 +273,28 @@ body {
   100% { box-shadow: 0 0 0 12px rgba(31, 61, 51, 0); border-color: var(--hairline, #e0ddd5); }
 }
 
+/* Subskrypcik — orbity wokół awatara */
+@keyframes orbit-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes orbit-rotate-reverse {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+@keyframes orbit-counter-1 {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+@keyframes orbit-counter-2 {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes orbit-counter-3 {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pulse-ring::before,
   .scan-line,
@@ -283,8 +305,14 @@ body {
   .success-ring,
   .success-fade,
   .new-card,
-  .badge-pulse {
+  .badge-pulse,
+  .orbit-rotate,
+  .orbit-rotate-reverse {
     animation: none;
+  }
+  [style*="orbit-rotate"],
+  [style*="orbit-counter"] {
+    animation: none !important;
   }
   .success-fade {
     opacity: 1;

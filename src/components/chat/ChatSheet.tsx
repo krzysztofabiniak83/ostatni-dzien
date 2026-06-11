@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { AskBar } from './AskBar'
 import { ActionChips } from './ActionChips'
+import { WelcomeIntro } from './WelcomeIntro'
 import { supabase } from '../../lib/supabase'
 
 interface ChatMessage {
@@ -199,13 +200,7 @@ export function ChatSheet({
 
             {/* Messages scroll */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-2">
-              {messages.length === 0 && !streaming && (
-                <div className="flex h-full flex-col items-center justify-center text-center">
-                  <div className="mb-3 text-[13px] text-ink-tertiary">
-                    Zapytaj o swoje subskrypcje, plany, anulowanie albo alternatywy.
-                  </div>
-                </div>
-              )}
+              {messages.length === 0 && !streaming && <WelcomeIntro />}
 
               <div className="space-y-3 pb-4">
                 {messages.map((m, i) => (
