@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
-import { MARKET, type MarketEntry } from '../src/data/market'
+import { MARKET, type MarketEntry } from './_market'
 
 /**
  * Subskrypcik — agent czatu.
