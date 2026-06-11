@@ -73,6 +73,12 @@ const STYLES: Record<string, Style> = {
     weight: 'font-bold',
     sizeOverride: { sm: 'text-[15px]', lg: 'text-[26px]' },
   },
+  // ChatGPT — czarne tło z białą stylizowaną literą "G" (Geist mono).
+  chatgpt: {
+    bg: '#0D1F1A',
+    fg: '#fff',
+    customPath: 'M12 2.1 C6.5 2.1 2.1 6.5 2.1 12 c0 5.5 4.4 9.9 9.9 9.9 c5.5 0 9.9-4.4 9.9-9.9 C21.9 6.5 17.5 2.1 12 2.1z M12 6.5 c1.7 0 3.1 1 3.8 2.4 l-1.5 1.5 c-0.4-0.7-1.2-1.2-2.3-1.2 c-1.7 0-3 1.4-3 3 c0 1.7 1.3 3 3 3 c1.5 0 2.6-1 2.9-2.4 L12 12.9 V11 h5 v1 c0 2.8-2.2 5-5 5 c-2.8 0-5-2.2-5-5 C7 8.7 9.2 6.5 12 6.5z',
+  },
 }
 
 export function SubLogo({ logoClass, logoText, size = 'sm' }: SubLogoProps) {
