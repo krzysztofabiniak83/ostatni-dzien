@@ -6,6 +6,7 @@ import { AskBar } from './AskBar'
 import { ActionChips } from './ActionChips'
 import { WelcomeIntro } from './WelcomeIntro'
 import { supabase } from '../../lib/supabase'
+import { useSubscriptions } from '../../store/subscriptions'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -128,6 +129,20 @@ export function ChatSheet({
     } finally {
       setStreaming(false)
       abortRef.current = null
+      // Po odpowiedzi agenta odśwież listę z bazy — czat mógł dodać/zmienić wiersz.
+      // Diff ids → ustaw lastAddedId na świeżo dodaną subskrypcję (highlight + scroll-to-top).
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const uid = sessionData.session?.user.id
+        if (uid) {
+          const before = new Set(useSubscriptions.getState().subscriptions.map((s) => s.id))
+          await useSubscriptions.getState().loadFromRemote(uid)
+          const added = useSubscriptions.getState().subscriptions.find((s) => !before.has(s.id))
+          if (added) useSubscriptions.setState({ lastAddedId: added.id })
+        }
+      } catch {
+        /* cicho — refresh to best-effort */
+      }
     }
   }
 

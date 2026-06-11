@@ -115,7 +115,7 @@ export function Dashboard() {
   useEffect(() => {
     if (!lastAddedId) return
     listRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-    const t = window.setTimeout(() => clearLastAdded(), 2200)
+    const t = window.setTimeout(() => clearLastAdded(), 6000)
     return () => window.clearTimeout(t)
   }, [lastAddedId, clearLastAdded])
 

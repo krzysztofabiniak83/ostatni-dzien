@@ -105,6 +105,16 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
 
       {/* Logo */}
       <SubLogo logoClass={sub.logoClass} logoText={sub.logoText} />
+
+      {/* Badge „NOWY" — widoczny tylko przez czas highlightu (~2.2s) */}
+      {highlight && (
+        <div
+          className="absolute -top-2 right-3 rounded-pill bg-accent px-2 py-[3px] font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-bg-card shadow-sm"
+          style={{ boxShadow: '0 2px 8px -2px rgba(31,61,51,0.4)' }}
+        >
+          Nowy
+        </div>
+      )}
     </div>
   )
 }
