@@ -1,7 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import OpenAI from 'openai'
-import { createClient } from '@supabase/supabase-js'
 import { MARKET, type MarketEntry } from './_market.js'
+import { getUserFromRequest } from './_shared/auth.js'
+import { checkAndIncrementDailyUsage } from './_shared/rate-limit.js'
+import { formatSubDate, sectionFor, urgencyFor } from './_shared/format.js'
+import { SYSTEM_PROMPT } from './_shared/prompt.js'
 
 /**
  * Subskrypcik — agent czatu.
@@ -16,67 +19,7 @@ import { MARKET, type MarketEntry } from './_market.js'
  * Limit: DAILY_MESSAGE_LIMIT (20) wiadomości / user / dzień (UTC).
  */
 
-const DAILY_MESSAGE_LIMIT = 20
 const MODEL = process.env.SUBSKRYPCIK_MODEL || 'gpt-4o-mini'
-
-const SYSTEM_PROMPT = `Jesteś Subskrypcik — doradca subskrypcji w aplikacji "Ostatni Dzień".
-
-ZASADY (BEZWZGLĘDNE):
-1. NIGDY nie zaczynaj od powitania, "chętnie", "oczywiście", "rozumiem", "jasne".
-2. Pierwsze słowo = konkretny fakt, liczba lub kwota.
-3. Wszystkie kwoty w PLN, zawsze **pogrubione**.
-4. Każda odpowiedź kończy się JEDNYM pytaniem-CTA (np. "Podać link?", "Rozbić to?").
-5. Jeśli brak danych w narzędziu get_market_offer — powiedz wprost: "Nie mam aktualnych danych dla [X]." NIE wymyślaj cen.
-6. Maks 4 zdania per odpowiedź, chyba że user prosi o porównanie/listę.
-7. Używaj narzędzi PROAKTYWNIE:
-   - pytania o subskrypcje usera → get_user_subscriptions
-   - pytania o usługi z rynku (alternatywy, ceny, anulowanie) → get_market_offer
-   - "dodaj X za Y zł", "zapisz", "wpisz nową" → add_subscription (domyślnie miesięczny renewal, data startu = dziś)
-   - "anuluj X", "zapauzuj X", "wznów X", "zrezygnowałem z X" → change_subscription_status (status zmienia się, wiersz ZOSTAJE w bazie)
-   - "usuń X", "skasuj X", "wyrzuć", "usuń ostatni wpis", "usuń wszystkie X" → delete_subscription (FIZYCZNIE kasuje wiersz/wiersze z bazy)
-8. Język: polski. Formatowanie: Markdown (bold, listy).
-9. Nie udzielaj porad prawnych ani finansowych. Doradzasz wyłącznie w temacie subskrypcji.
-10. ZARZĄDZANIE SUBSKRYPCJAMI — zasady bezwzględne:
-    - Kwota, data i nazwa pochodzą z wiadomości usera. NIE zastępuj ich "aktualną wiedzą" o cenniku (np. "Netflix kosztuje teraz 37 zł" — zabronione, nawet jeżeli tak myślisz). User napisał 29 zł → użyj 29 zł.
-    - PRZY DODAWANIU obowiązkowo dopytuj o brakujące dane ZANIM wywołasz add_subscription:
-        • brak kwoty → "Ile to kosztuje miesięcznie? (np. 29,99 zł)"
-        • brak daty/dnia odnowienia, gdy user nie powiedział "dziś" / "od dziś" → "Kiedy następne pobranie? (np. dziś, za 5 dni, 25 czerwca)"
-        • brak nazwy → "Jakiej usługi to dotyczy?"
-      Zadaj WSZYSTKIE brakujące pytania w JEDNEJ wiadomości (bullet listą). Dopiero gdy masz komplet — wywołaj tool.
-    - Anuluj/pauza vs Usuń — to różne operacje. Anulowanie zmienia status (subskrypcja zostaje w bazie z tagiem cancelled, można ją zobaczyć i wznowić). Usuwanie fizycznie kasuje wiersz (nieodwracalne). Domyślnie przy "rezygnuję", "anuluj", "zrezygnowałem" → change_subscription_status. Tylko gdy user wprost mówi "usuń/skasuj/wyrzuć" → delete_subscription.
-    - Przy change_subscription_status / delete_subscription najpierw użyj get_user_subscriptions, dopasuj po nazwie case-insensitive (skróty i literówki OK). Jeżeli pasuje wiele i user nie powiedział wprost "wszystkie" — pokaż listę i zapytaj o doprecyzowanie. "Usuń wszystkie X" → wywołaj delete_subscription z all=true.
-    - "Ostatni wpis" / "ostatnio dodane" → użyj nameQuery=null, last=true (tool wybiera najnowszy wiersz).
-    - Po każdej zmianie potwierdź krótko co zaszło. Tool sam weryfikuje zapis — jeżeli zwróci błąd, powiedz to userowi, nie udawaj sukcesu.
-
-PRZYKŁAD STYLU:
-U: "Jak zrezygnować ze Zdrofitu?"
-AI: "Zdrofit wymaga **miesięcznego okresu wypowiedzenia** ze skutkiem na koniec miesiąca kalendarzowego. Składając dziś — zapłacisz za kolejny pełny miesiąc. Najbezpieczniej przez portal klienta (rezygnacje mailowe są procesowane z opóźnieniem). Podać link do formularza?"`
-
-const POLISH_MONTHS = [
-  'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
-  'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia',
-]
-
-/** Format "Dziś · 9:00" / "2 czerwca · 9:00" zgodny z resztą bazy. */
-function formatSubDate(daysUntil: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + Math.max(0, daysUntil))
-  if (daysUntil <= 0) return 'Dziś · 9:00'
-  return `${d.getDate()} ${POLISH_MONTHS[d.getMonth()]} · 9:00`
-}
-
-function sectionFor(daysUntil: number): 'today' | 'week' | 'month' | 'later' {
-  if (daysUntil <= 0) return 'today'
-  if (daysUntil <= 7) return 'week'
-  if (daysUntil <= 31) return 'month'
-  return 'later'
-}
-
-function urgencyFor(daysUntil: number): 'today' | 'critical' | 'normal' {
-  if (daysUntil <= 0) return 'today'
-  if (daysUntil <= 3) return 'critical'
-  return 'normal'
-}
 
 function findMarketOffer(query: string): MarketEntry | null {
   const q = query.toLowerCase().trim()
@@ -176,52 +119,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const openaiKey = process.env.OPENAI_API_KEY
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const supabaseAnon = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
-
-  if (!openaiKey || !supabaseUrl || !supabaseAnon) {
+  if (!openaiKey) {
     res.status(500).json({ error: 'Brak konfiguracji serwera (env vars).' })
     return
   }
 
-  // Auth: JWT z headera Authorization: Bearer <token>
-  const auth = req.headers.authorization
-  const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null
-  if (!token) {
-    res.status(401).json({ error: 'Brak autoryzacji.' })
-    return
-  }
-
-  // Klient supabase per-request z tokenem usera (respektuje RLS).
-  const supabase = createClient(supabaseUrl, supabaseAnon, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
-
-  const { data: userData, error: userErr } = await supabase.auth.getUser(token)
-  if (userErr || !userData.user) {
-    res.status(401).json({ error: 'Nieprawidłowy token.' })
-    return
-  }
-  const userId = userData.user.id
-
-  // Rate limit: 20 / user / dzień (UTC date).
-  const today = new Date().toISOString().slice(0, 10)
-  const { data: usageRow } = await supabase
-    .from('chat_daily_usage')
-    .select('message_count')
-    .eq('user_id', userId)
-    .eq('date', today)
-    .maybeSingle()
-
-  const used = usageRow?.message_count ?? 0
-  if (used >= DAILY_MESSAGE_LIMIT) {
-    res.status(429).json({
-      error: 'rate_limit',
-      message: 'Wykorzystałeś dzienny limit pytań. Wrócę jutro.',
-    })
-    return
-  }
+  const ctx = await getUserFromRequest(req, res)
+  if (!ctx) return
+  const { supabase, userId } = ctx
 
   // Parse body.
   const body = req.body as { messages?: Array<{ role: 'user' | 'assistant'; content: string }> }
@@ -231,11 +136,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  // Inkrementacja licznika (upsert).
-  await supabase.from('chat_daily_usage').upsert(
-    { user_id: userId, date: today, message_count: used + 1 },
-    { onConflict: 'user_id,date' },
-  )
+  const rl = await checkAndIncrementDailyUsage(supabase, userId)
+  if (!rl.ok) {
+    res.status(429).json({
+      error: 'rate_limit',
+      message: 'Wykorzystałeś dzienny limit pytań. Wrócę jutro.',
+    })
+    return
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
 
   // Pre-fetch listy do system message (oszczędza tool call na 80% pytań).
   const { data: subs } = await supabase
