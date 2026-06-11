@@ -1,0 +1,215 @@
+import {
+  Code,
+  EndpointHeader,
+  Eyebrow,
+  InlineCode,
+  ParamRow,
+  useActiveSection,
+  type SectionRef,
+} from './primitives'
+
+const SECTIONS: SectionRef[] = [
+  { id: 'auth', label: 'Autoryzacja' },
+  { id: 'create', label: 'Create' },
+  { id: 'ask', label: 'Ask' },
+  { id: 'read', label: 'Read' },
+]
+
+export function ApiTab() {
+  const active = useActiveSection(SECTIONS.map((s) => s.id))
+  return (
+    <div className="mx-auto flex max-w-[1200px] gap-12 px-6 py-10">
+      <aside className="sticky top-32 hidden h-[calc(100vh-9rem)] w-[220px] shrink-0 overflow-y-auto md:block">
+        <nav className="flex flex-col gap-1">
+          <Eyebrow>REST API</Eyebrow>
+          {SECTIONS.map((s) => {
+            const isActive = active === s.id
+            return (
+              <a
+                key={s.id}
+                href={`#${s.id}`}
+                className={`-mx-2 rounded-md px-2 py-1.5 text-[14px] transition-colors ${
+                  isActive
+                    ? 'bg-accent-soft font-medium text-accent'
+                    : 'text-ink-secondary hover:bg-bg-subtle hover:text-ink-primary'
+                }`}
+              >
+                {s.label}
+              </a>
+            )
+          })}
+        </nav>
+      </aside>
+
+      <main className="min-w-0 flex-1">
+        <div className="mb-10">
+          <Eyebrow>REST API</Eyebrow>
+          <h1 className="font-serif text-[40px] leading-tight tracking-tight text-ink-primary">
+            API Reference
+          </h1>
+          <p className="mt-3 max-w-[640px] text-[15.5px] leading-relaxed text-ink-secondary">
+            Trzy endpointy do programowego sterowania kontem w aplikacji „Ostatni Dzień":
+            dodawanie i zmiana statusu subskrypcji, pytanie do agenta Subskrypcik oraz
+            odczyt listy.
+          </p>
+        </div>
+
+        <section id="auth" className="mb-12 scroll-mt-32 rounded-lg border border-hairline bg-bg-card p-5">
+          <Eyebrow>Autoryzacja</Eyebrow>
+          <p className="text-[14px] leading-relaxed text-ink-secondary">
+            Każde żądanie wymaga nagłówka <InlineCode>Authorization: Bearer &lt;token&gt;</InlineCode>{' '}
+            gdzie <InlineCode>token</InlineCode> to <InlineCode>access_token</InlineCode> z aktywnej
+            sesji Supabase. RLS po stronie bazy gwarantuje izolację per użytkownik. Endpointy
+            AI (<InlineCode>/api/ask</InlineCode>) podlegają wspólnemu limitowi{' '}
+            <strong>20 wiadomości / użytkownik / dzień</strong>.
+          </p>
+        </section>
+
+        <section id="create" className="mb-16 scroll-mt-32">
+          <Eyebrow>API · Create</Eyebrow>
+          <h2 className="mb-2 font-serif text-[28px] leading-tight text-ink-primary">
+            Dodaj lub zmień subskrypcję
+          </h2>
+          <p className="mb-6 text-[14.5px] leading-relaxed text-ink-secondary">
+            Dwie operacje na zasobie <InlineCode>subscriptions</InlineCode>: utworzenie nowej
+            pozycji (<strong>POST</strong>) i zmiana statusu istniejącej (<strong>PATCH</strong>).
+            Subskrypcje są zawsze miesięczne; <em>cancelled</em> i <em>paused</em> zostają w bazie
+            (można je wznowić, ustawiając <InlineCode>active</InlineCode>).
+          </p>
+
+          <h3 className="mt-8 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Utwórz subskrypcję
+          </h3>
+          <EndpointHeader method="POST" path="/api/subscriptions" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Body</h4>
+          <div>
+            <ParamRow name="name" type="string" required>
+              Nazwa usługi, np. <InlineCode>"Netflix Podstawowy"</InlineCode>.
+            </ParamRow>
+            <ParamRow name="amountPLN" type="number" required>
+              Kwota w PLN (może mieć ułamek, np. <InlineCode>29.99</InlineCode>).
+            </ParamRow>
+            <ParamRow name="daysUntil" type="integer">
+              Liczba dni od dziś do następnego pobrania. Domyślnie <InlineCode>0</InlineCode> (dziś).
+            </ParamRow>
+            <ParamRow name="type" type='"trial" | "renewal"'>
+              Domyślnie <InlineCode>"renewal"</InlineCode>. <InlineCode>"trial"</InlineCode> tylko
+              gdy świadomie zaznaczasz okres próbny.
+            </ParamRow>
+          </div>
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl -X POST https://ostatnidzien.app/api/subscriptions \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name":"Netflix","amountPLN":29.99}'`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 201</h4>
+          <Code language="json">{`{
+  "subscription": {
+    "id": "user-1717250000000",
+    "name": "Netflix",
+    "amountPLN": 29.99,
+    "date": "Dziś · 9:00",
+    "daysUntil": 0,
+    "type": "renewal",
+    "status": "active"
+  }
+}`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">Zmień status</h3>
+          <EndpointHeader method="PATCH" path="/api/subscriptions/:id" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Body</h4>
+          <div>
+            <ParamRow name="status" type='"active" | "paused" | "cancelled"' required>
+              Docelowy status. <InlineCode>cancelled</InlineCode> nie usuwa wiersza — żeby usunąć
+              fizycznie, użyj agenta AI z poleceniem „usuń".
+            </ParamRow>
+          </div>
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl -X PATCH https://ostatnidzien.app/api/subscriptions/user-1717250000000 \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"status":"paused"}'`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{
+  "subscription": {
+    "id": "user-1717250000000",
+    "name": "Netflix",
+    "status": "paused"
+  }
+}`}</Code>
+          <p className="mt-4 text-[13px] text-ink-tertiary">
+            Błędy: <InlineCode>400</InlineCode> dla niepoprawnego statusu,{' '}
+            <InlineCode>404</InlineCode> gdy id nie należy do zalogowanego usera.
+          </p>
+        </section>
+
+        <section id="ask" className="mb-16 scroll-mt-32">
+          <Eyebrow>API · Ask</Eyebrow>
+          <h2 className="mb-2 font-serif text-[28px] leading-tight text-ink-primary">
+            Zapytaj agenta AI
+          </h2>
+          <p className="mb-6 text-[14.5px] leading-relaxed text-ink-secondary">
+            One-shot Q&amp;A do Subskrypcika. Bez streamingu, bez efektów ubocznych na bazie —
+            zwraca jedną odpowiedź w JSON. Opcjonalnie wstrzykuje snapshot Twoich aktywnych
+            subskrypcji jako kontekst (suma, lista, najbliższe pobrania).
+          </p>
+          <EndpointHeader method="POST" path="/api/ask" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Body</h4>
+          <div>
+            <ParamRow name="question" type="string" required>
+              Pytanie do agenta. Polski, naturalne zdanie.
+            </ParamRow>
+            <ParamRow name="includeSubscriptions" type="boolean">
+              Gdy <InlineCode>true</InlineCode>, do system message dokleja listę aktywnych
+              subskrypcji. Domyślnie <InlineCode>false</InlineCode>.
+            </ParamRow>
+          </div>
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl -X POST https://ostatnidzien.app/api/ask \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"question":"Ile wydaję miesięcznie?","includeSubscriptions":true}'`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{
+  "answer": "**434,96 zł** miesięcznie z 8 aktywnych subskrypcji. Największe pozycje: Netflix **29,99 zł** i Adobe CC **272,99 zł**. Rozbić listę?"
+}`}</Code>
+          <p className="mt-4 text-[13px] text-ink-tertiary">
+            Po przekroczeniu limitu 20/dzień endpoint zwraca{' '}
+            <InlineCode>429</InlineCode> z <InlineCode>{`{ "error": "rate_limit" }`}</InlineCode>.
+            Licznik resetuje się o północy UTC.
+          </p>
+        </section>
+
+        <section id="read" className="mb-24 scroll-mt-32">
+          <Eyebrow>API · Read</Eyebrow>
+          <h2 className="mb-2 font-serif text-[28px] leading-tight text-ink-primary">
+            Pobierz listę subskrypcji
+          </h2>
+          <p className="mb-6 text-[14.5px] leading-relaxed text-ink-secondary">
+            Zwraca wszystkie subskrypcje użytkownika ze statusem{' '}
+            <InlineCode>active</InlineCode> lub <InlineCode>paused</InlineCode>, posortowane
+            rosnąco po liczbie dni do następnego pobrania.
+          </p>
+          <EndpointHeader method="GET" path="/api/subscriptions" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl https://ostatnidzien.app/api/subscriptions \\
+  -H "Authorization: Bearer $TOKEN"`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{
+  "subscriptions": [
+    {
+      "id": "user-1717250000000",
+      "name": "Netflix",
+      "amountPLN": 29.99,
+      "date": "Dziś · 9:00",
+      "daysUntil": 0,
+      "type": "renewal",
+      "status": "active"
+    }
+  ]
+}`}</Code>
+        </section>
+      </main>
+    </div>
+  )
+}

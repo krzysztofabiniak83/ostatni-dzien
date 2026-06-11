@@ -1,0 +1,194 @@
+import { createMcpHandler, withMcpAuth } from 'mcp-handler'
+import { z } from 'zod'
+import { authenticateToken, type AuthedContext } from './_shared/auth.js'
+import { formatSubDate, sectionFor, urgencyFor } from './_shared/format.js'
+
+/**
+ * MCP server (Streamable HTTP) — `/api/mcp`.
+ * Reużywa tej samej autoryzacji co REST: Bearer = Supabase access_token.
+ * Trzy toole CRUD — bez `ask_agent`, żeby nie wlatywały w limit /api/ask.
+ */
+
+export const config = { runtime: 'nodejs' }
+
+type ToolResult = {
+  content: { type: 'text'; text: string }[]
+  isError?: boolean
+}
+
+const ok = (data: unknown): ToolResult => ({
+  content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
+})
+
+const fail = (message: string): ToolResult => ({
+  content: [{ type: 'text', text: message }],
+  isError: true,
+})
+
+async function withAuthCtx(
+  token: string | undefined,
+  fn: (ctx: AuthedContext) => Promise<ToolResult>,
+): Promise<ToolResult> {
+  const result = await authenticateToken(token ?? null)
+  if (!result.ok) return fail(`${result.error}: ${result.message}`)
+  return fn(result.ctx)
+}
+
+const baseHandler = createMcpHandler(
+  (server) => {
+    server.tool(
+      'list_subscriptions',
+      'Zwraca aktywne i zapauzowane subskrypcje zalogowanego użytkownika, posortowane po dniach do najbliższego pobrania.',
+      {},
+      async (_args, extra) => {
+        return withAuthCtx(extra.authInfo?.token, async ({ supabase, userId }) => {
+          const { data, error } = await supabase
+            .from('subscriptions')
+            .select('id,name,amount_pln,date,days_until,type,status')
+            .eq('user_id', userId)
+            .in('status', ['active', 'paused'])
+            .order('days_until', { ascending: true })
+          if (error) return fail(`db_error: ${error.message}`)
+          return ok({
+            subscriptions: (data ?? []).map((s) => ({
+              id: s.id,
+              name: s.name,
+              amountPLN: s.amount_pln / 100,
+              date: s.date,
+              daysUntil: s.days_until,
+              type: s.type,
+              status: s.status,
+            })),
+          })
+        })
+      },
+    )
+
+    server.tool(
+      'add_subscription',
+      'Dodaje nową subskrypcję dla zalogowanego użytkownika. Domyślnie typ "renewal", miesięczna, daysUntil=0.',
+      {
+        name: z.string().min(1).describe('Nazwa usługi, np. "Netflix Podstawowy".'),
+        amountPLN: z.number().positive().describe('Kwota miesięczna w PLN (może mieć ułamek).'),
+        daysUntil: z.number().int().min(0).optional().describe('Dni do najbliższego pobrania. Domyślnie 0.'),
+        type: z.enum(['trial', 'renewal']).optional().describe('Domyślnie "renewal".'),
+      },
+      async ({ name, amountPLN, daysUntil, type }, extra) => {
+        return withAuthCtx(extra.authInfo?.token, async ({ supabase, userId }) => {
+          const trimmedName = name.trim()
+          if (!trimmedName) return fail('invalid_body: name nie może być pusty')
+
+          const d = Math.max(0, Math.floor(daysUntil ?? 0))
+          const subType: 'trial' | 'renewal' = type === 'trial' ? 'trial' : 'renewal'
+          const amount_pln = Math.round(amountPLN * 100)
+          const id = `user-${Date.now()}`
+          const period = subType === 'trial' ? 'po próbie, potem miesięcznie' : 'miesięcznie'
+          const periodShort = subType === 'trial' ? 'po próbie' : 'miesięcznie'
+
+          const { error: insErr } = await supabase.from('subscriptions').insert({
+            id,
+            user_id: userId,
+            name: trimmedName,
+            logo_class: null,
+            logo_text: (trimmedName[0] || '?').toUpperCase(),
+            days_until: d,
+            date: formatSubDate(d),
+            amount_pln,
+            period,
+            period_short: periodShort,
+            type: subType,
+            urgency: urgencyFor(d),
+            section: sectionFor(d),
+            chart_heights: [0, 0, 0, 0, 0, 4],
+            chart_total_pln: 0,
+            status: 'active',
+          })
+          if (insErr) return fail(`insert_failed: ${insErr.message}`)
+
+          const { data: verify } = await supabase
+            .from('subscriptions')
+            .select('id,name,amount_pln,date,days_until,type,status')
+            .eq('id', id)
+            .eq('user_id', userId)
+            .maybeSingle()
+          if (!verify) return fail('not_verified: wiersz nie znaleziony po INSERT')
+
+          return ok({
+            subscription: {
+              id: verify.id,
+              name: verify.name,
+              amountPLN: verify.amount_pln / 100,
+              date: verify.date,
+              daysUntil: verify.days_until,
+              type: verify.type,
+              status: verify.status,
+            },
+          })
+        })
+      },
+    )
+
+    server.tool(
+      'update_subscription_status',
+      'Zmienia status istniejącej subskrypcji ("active" | "paused" | "cancelled"). Nie usuwa wiersza z bazy.',
+      {
+        id: z.string().min(1).describe('Identyfikator subskrypcji (z list_subscriptions).'),
+        status: z.enum(['active', 'paused', 'cancelled']).describe('Docelowy status.'),
+      },
+      async ({ id, status }, extra) => {
+        return withAuthCtx(extra.authInfo?.token, async ({ supabase, userId }) => {
+          const { data: existing } = await supabase
+            .from('subscriptions')
+            .select('id')
+            .eq('id', id)
+            .eq('user_id', userId)
+            .maybeSingle()
+          if (!existing) return fail('not_found: subskrypcja nie znaleziona')
+
+          const { error: updErr } = await supabase
+            .from('subscriptions')
+            .update({ status })
+            .eq('id', id)
+            .eq('user_id', userId)
+          if (updErr) return fail(`update_failed: ${updErr.message}`)
+
+          const { data: verify } = await supabase
+            .from('subscriptions')
+            .select('id,name,status')
+            .eq('id', id)
+            .eq('user_id', userId)
+            .maybeSingle()
+          if (!verify || verify.status !== status) return fail('not_verified: status nie potwierdzony')
+
+          return ok({ subscription: verify })
+        })
+      },
+    )
+  },
+  {
+    serverInfo: { name: 'ostatni-dzien', version: '0.1.0' },
+  },
+  {
+    basePath: '/api',
+    disableSse: true,
+    maxDuration: 30,
+    verboseLogs: false,
+  },
+)
+
+const handler = withMcpAuth(
+  baseHandler,
+  async (_req, bearerToken) => {
+    if (!bearerToken) return undefined
+    const result = await authenticateToken(bearerToken)
+    if (!result.ok) return undefined
+    return {
+      token: bearerToken,
+      clientId: result.ctx.userId,
+      scopes: [],
+    }
+  },
+  { required: true },
+)
+
+export default handler
