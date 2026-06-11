@@ -101,9 +101,9 @@ export function WelcomeIntro() {
   ]
 
   return (
-    <div className="relative flex h-full flex-col items-center justify-start px-6 pt-4 text-center">
+    <div className="relative flex h-full flex-col items-center justify-start overflow-x-hidden px-6 pt-4 text-center">
       {/* Sekcja z awatarem + orbitami — fixed height żeby orbity nie wlazły na tekst */}
-      <div className="relative mb-5 flex items-center justify-center" style={{ height: 260, width: 260 }}>
+      <div className="relative mb-5 flex items-center justify-center overflow-hidden" style={{ height: 260, width: 280 }}>
         {/* Orbity w tle */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden style={{ opacity: 0.5 }}>
           <div className="relative">

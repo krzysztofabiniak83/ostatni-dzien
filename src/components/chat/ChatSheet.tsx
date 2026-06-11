@@ -199,7 +199,7 @@ export function ChatSheet({
             </div>
 
             {/* Messages scroll */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-2">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-5 py-2">
               {messages.length === 0 && !streaming && <WelcomeIntro />}
 
               <div className="space-y-3 pb-4">
