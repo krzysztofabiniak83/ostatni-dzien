@@ -31,12 +31,45 @@ ZASADY (BEZWZGLĘDNE):
 7. Używaj narzędzi PROAKTYWNIE:
    - pytania o subskrypcje usera → get_user_subscriptions
    - pytania o usługi z rynku (alternatywy, ceny, anulowanie) → get_market_offer
+   - "dodaj X za Y zł", "zapisz", "wpisz nową" → add_subscription (domyślnie miesięczny renewal, data startu = dziś)
+   - "anuluj X", "zapauzuj X", "wznów X", "zrezygnowałem z X" → change_subscription_status
 8. Język: polski. Formatowanie: Markdown (bold, listy).
 9. Nie udzielaj porad prawnych ani finansowych. Doradzasz wyłącznie w temacie subskrypcji.
+10. ZARZĄDZANIE SUBSKRYPCJAMI — zasady bezwzględne:
+    - Kwota, data i nazwa pochodzą z wiadomości usera. NIE zastępuj ich "aktualną wiedzą" o cenniku (np. "Netflix kosztuje teraz 37 zł" — zabronione, nawet jeżeli tak myślisz). User napisał 29 zł → użyj 29 zł.
+    - Jeżeli user nie podał kwoty przy dodawaniu — DOPYTAJ, nie zgaduj z pamięci.
+    - Przy change_subscription_status najpierw użyj get_user_subscriptions, dopasuj po nazwie case-insensitive (skróty i literówki OK). Jeżeli pasuje wiele lub zero — powiedz to wprost i poproś o doprecyzowanie.
+    - Po każdej zmianie potwierdź krótko co zaszło (nazwa + kwota/data albo nazwa + nowy status). Tool sam weryfikuje zapis — jeżeli zwróci błąd, powiedz to userowi, nie udawaj sukcesu.
 
 PRZYKŁAD STYLU:
 U: "Jak zrezygnować ze Zdrofitu?"
 AI: "Zdrofit wymaga **miesięcznego okresu wypowiedzenia** ze skutkiem na koniec miesiąca kalendarzowego. Składając dziś — zapłacisz za kolejny pełny miesiąc. Najbezpieczniej przez portal klienta (rezygnacje mailowe są procesowane z opóźnieniem). Podać link do formularza?"`
+
+const POLISH_MONTHS = [
+  'stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca',
+  'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia',
+]
+
+/** Format "Dziś · 9:00" / "2 czerwca · 9:00" zgodny z resztą bazy. */
+function formatSubDate(daysUntil: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + Math.max(0, daysUntil))
+  if (daysUntil <= 0) return 'Dziś · 9:00'
+  return `${d.getDate()} ${POLISH_MONTHS[d.getMonth()]} · 9:00`
+}
+
+function sectionFor(daysUntil: number): 'today' | 'week' | 'month' | 'later' {
+  if (daysUntil <= 0) return 'today'
+  if (daysUntil <= 7) return 'week'
+  if (daysUntil <= 31) return 'month'
+  return 'later'
+}
+
+function urgencyFor(daysUntil: number): 'today' | 'critical' | 'normal' {
+  if (daysUntil <= 0) return 'today'
+  if (daysUntil <= 3) return 'critical'
+  return 'normal'
+}
 
 function findMarketOffer(query: string): MarketEntry | null {
   const q = query.toLowerCase().trim()
@@ -55,6 +88,41 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       description:
         'Zwraca listę aktywnych subskrypcji zalogowanego użytkownika z bazy: nazwa, kwota PLN, data następnego pobrania, typ (trial/renewal).',
       parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'add_subscription',
+      description:
+        'Dodaje nową subskrypcję do bazy zalogowanego użytkownika. Używaj gdy user prosi o "dodaj/zapisz/wpisz". Kwota od usera jest święta — NIE zastępuj jej cennikiem z pamięci. Domyślnie type=renewal, cykl miesięczny, daysUntil=0 (dziś), waluta PLN. Tool sam tworzy id, formatuje datę, oblicza section/urgency i weryfikuje zapis SELECT-em.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Nazwa usługi (np. "Netflix Podstawowy").' },
+          amountPLN: { type: 'number', description: 'Kwota w PLN, np. 29 lub 29.99. Jeżeli user podał EUR/USD — przelicz (1 EUR ≈ 4.28 PLN, 1 USD ≈ 3.97 PLN) i wspomnij o przeliczeniu w odpowiedzi.' },
+          daysUntil: { type: 'integer', description: 'Liczba dni od dziś do następnego pobrania. 0 = dziś (default).', default: 0 },
+          type: { type: 'string', enum: ['trial', 'renewal'], description: 'trial tylko przy wyraźnym sygnale ("okres próbny", "darmowy miesiąc"). Default: renewal.', default: 'renewal' },
+        },
+        required: ['name', 'amountPLN'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'change_subscription_status',
+      description:
+        'Zmienia status istniejącej subskrypcji usera: cancelled (anulowana), paused (zapauzowana), active (wznowiona). Przyjmuje albo id (gdy znasz dokładnie) albo nameQuery (dopasowanie po fragmencie nazwy). Tool sam weryfikuje zmianę SELECT-em po UPDATE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          nameQuery: { type: 'string', description: 'Fragment nazwy usługi do dopasowania (np. "netflix", "chat"). Case-insensitive.' },
+          id: { type: 'string', description: 'Dokładne id wiersza (z get_user_subscriptions). Użyj gdy nameQuery jest niejednoznaczny.' },
+          newStatus: { type: 'string', enum: ['cancelled', 'paused', 'active'], description: 'Docelowy status.' },
+        },
+        required: ['newStatus'],
+      },
     },
   },
   {
@@ -148,8 +216,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Pre-fetch listy do system message (oszczędza tool call na 80% pytań).
   const { data: subs } = await supabase
     .from('subscriptions')
-    .select('name,amount_pln,date,type,days_until')
+    .select('name,amount_pln,date,type,days_until,status')
     .eq('user_id', userId)
+    .eq('status', 'active')
     .order('days_until', { ascending: true })
     .limit(30)
 
@@ -246,6 +315,106 @@ ${listSnapshot || '(pusta)'}`
           } else if (tc.name === 'get_market_offer') {
             const args = JSON.parse(tc.args || '{}') as { serviceName?: string }
             result = findMarketOffer(args.serviceName || '')
+          } else if (tc.name === 'add_subscription') {
+            const args = JSON.parse(tc.args || '{}') as {
+              name?: string
+              amountPLN?: number
+              daysUntil?: number
+              type?: 'trial' | 'renewal'
+            }
+            const name = (args.name || '').trim()
+            if (!name || typeof args.amountPLN !== 'number') {
+              result = { error: 'Brakuje nazwy lub kwoty.' }
+            } else {
+              const daysUntil = Math.max(0, Math.floor(args.daysUntil ?? 0))
+              const subType = args.type === 'trial' ? 'trial' : 'renewal'
+              const amount_pln = Math.round(args.amountPLN * 100)
+              const id = `user-${Date.now()}`
+              const period = subType === 'trial' ? 'po próbie, potem miesięcznie' : 'miesięcznie'
+              const periodShort = subType === 'trial' ? 'po próbie' : 'miesięcznie'
+              const { error: insErr } = await supabase.from('subscriptions').insert({
+                id,
+                user_id: userId,
+                name,
+                logo_class: null,
+                logo_text: (name[0] || '?').toUpperCase(),
+                days_until: daysUntil,
+                date: formatSubDate(daysUntil),
+                amount_pln,
+                period,
+                period_short: periodShort,
+                type: subType,
+                urgency: urgencyFor(daysUntil),
+                section: sectionFor(daysUntil),
+                chart_heights: [0, 0, 0, 0, 0, 4],
+                chart_total_pln: 0,
+                status: 'active',
+              })
+              if (insErr) {
+                result = { error: `INSERT nieudany: ${insErr.message}` }
+              } else {
+                const { data: verify } = await supabase
+                  .from('subscriptions')
+                  .select('id,name,amount_pln,date,days_until,type,status')
+                  .eq('id', id)
+                  .eq('user_id', userId)
+                  .maybeSingle()
+                result = verify
+                  ? { ok: true, saved: verify }
+                  : { error: 'Wiersz nie znaleziony po INSERT — operacja nie potwierdzona.' }
+              }
+            }
+          } else if (tc.name === 'change_subscription_status') {
+            const args = JSON.parse(tc.args || '{}') as {
+              nameQuery?: string
+              id?: string
+              newStatus?: 'cancelled' | 'paused' | 'active'
+            }
+            if (!args.newStatus) {
+              result = { error: 'Brak newStatus.' }
+            } else {
+              let targetId = args.id
+              if (!targetId && args.nameQuery) {
+                const q = `%${args.nameQuery.toLowerCase()}%`
+                const { data: matches } = await supabase
+                  .from('subscriptions')
+                  .select('id,name,status')
+                  .eq('user_id', userId)
+                  .ilike('name', q)
+                if (!matches || matches.length === 0) {
+                  result = { error: `Brak subskrypcji pasującej do "${args.nameQuery}".` }
+                } else if (matches.length > 1) {
+                  result = {
+                    error: 'Wiele dopasowań — podaj id.',
+                    candidates: matches,
+                  }
+                } else {
+                  targetId = matches[0].id
+                }
+              }
+              if (targetId && !(result as { error?: string } | null)?.error) {
+                const { error: updErr } = await supabase
+                  .from('subscriptions')
+                  .update({ status: args.newStatus })
+                  .eq('id', targetId)
+                  .eq('user_id', userId)
+                if (updErr) {
+                  result = { error: `UPDATE nieudany: ${updErr.message}` }
+                } else {
+                  const { data: verify } = await supabase
+                    .from('subscriptions')
+                    .select('id,name,status')
+                    .eq('id', targetId)
+                    .eq('user_id', userId)
+                    .maybeSingle()
+                  result = verify && verify.status === args.newStatus
+                    ? { ok: true, updated: verify }
+                    : { error: 'Status nie został zmieniony — weryfikacja nie potwierdziła.' }
+                }
+              } else if (!targetId && !(result as { error?: string } | null)?.error) {
+                result = { error: 'Podaj nameQuery lub id.' }
+              }
+            }
           }
         } catch (e) {
           result = { error: 'Tool execution failed' }
