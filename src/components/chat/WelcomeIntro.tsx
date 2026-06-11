@@ -71,31 +71,31 @@ function OrbitItem({
   )
 }
 
-const AVATAR_SIZE = 128
+const AVATAR_SIZE = 96
 
 export function WelcomeIntro() {
   const reduce = useReducedMotion()
   const [imgFailed, setImgFailed] = useState(false)
 
-  // 2 orbity — ciasno wokół awatara (128px), żeby nie zachodzić na tekst.
-  // Avatar promień = 64. Orbity: 92 i 118.
+  // 2 orbity — kompaktowe, mieszczą się w całości w sheet.
+  // Avatar promień = 48. Orbity: 70 i 92 (mogą lekko nachodzić na tekst).
   const orbits = [
     {
-      radius: 92,
+      radius: 70,
       duration: 32,
       reverse: false,
       counter: 'orbit-counter-1',
-      items: [BRANDS[0], BRANDS[1], BRANDS[2], BRANDS[3]], // 4 chipy
-      size: 28,
+      items: [BRANDS[0], BRANDS[1], BRANDS[2], BRANDS[3]],
+      size: 24,
       startAngle: 30,
     },
     {
-      radius: 118,
+      radius: 92,
       duration: 50,
       reverse: true,
       counter: 'orbit-counter-2',
       items: [BRANDS[4], BRANDS[5], BRANDS[6], BRANDS[7]],
-      size: 26,
+      size: 22,
       startAngle: 0,
     },
   ]
@@ -103,7 +103,7 @@ export function WelcomeIntro() {
   return (
     <div className="relative flex h-full flex-col items-center justify-start overflow-x-hidden px-6 pt-4 text-center">
       {/* Sekcja z awatarem + orbitami — fixed height żeby orbity nie wlazły na tekst */}
-      <div className="relative mb-5 flex items-center justify-center overflow-hidden" style={{ height: 260, width: 280 }}>
+      <div className="relative mb-3 flex items-center justify-center" style={{ height: 220, width: 240 }}>
         {/* Orbity w tle */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-hidden style={{ opacity: 0.5 }}>
           <div className="relative">
