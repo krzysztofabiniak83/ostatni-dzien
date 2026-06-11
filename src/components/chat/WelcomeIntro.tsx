@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { siNetflix, siSpotify, siApple, siNotion, siYoutube, siAudible, siDuolingo, siFigma } from 'simple-icons'
 
@@ -74,6 +75,7 @@ const AVATAR_SIZE = 128
 
 export function WelcomeIntro() {
   const reduce = useReducedMotion()
+  const [imgFailed, setImgFailed] = useState(false)
 
   // 2 orbity — ciasno wokół awatara (128px), żeby nie zachodzić na tekst.
   // Avatar promień = 64. Orbity: 92 i 118.
@@ -156,25 +158,18 @@ export function WelcomeIntro() {
             boxShadow: '0 16px 40px -10px rgba(31,61,51,0.4), 0 0 0 4px rgba(245,243,238,0.9)',
           }}
         >
-          <img
-            src="/subskrypcik-avatar.png"
-            alt="Subskrypcik"
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              // Fallback: ukryj img, pokaż serif "S"
-              ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-              const fallback = e.currentTarget.nextElementSibling as HTMLElement | null
-              if (fallback) fallback.style.display = 'flex'
-            }}
-          />
-          <div
-            className="absolute inset-0 hidden items-center justify-center"
-            aria-hidden
-          >
+          {!imgFailed ? (
+            <img
+              src="/subskrypcik-avatar.png"
+              alt="Subskrypcik"
+              className="h-full w-full object-cover"
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
             <span className="font-serif text-[60px] italic leading-none" style={{ marginTop: -4 }}>
               S
             </span>
-          </div>
+          )}
         </div>
       </div>
 
