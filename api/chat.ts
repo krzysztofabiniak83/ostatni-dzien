@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import OpenAI from 'openai'
 import { createClient } from '@supabase/supabase-js'
-import marketData from '../src/data/market.json'
+import { MARKET, type MarketEntry } from '../src/data/market'
 
 /**
  * Subskrypcik — agent czatu.
@@ -37,23 +37,6 @@ ZASADY (BEZWZGLĘDNE):
 PRZYKŁAD STYLU:
 U: "Jak zrezygnować ze Zdrofitu?"
 AI: "Zdrofit wymaga **miesięcznego okresu wypowiedzenia** ze skutkiem na koniec miesiąca kalendarzowego. Składając dziś — zapłacisz za kolejny pełny miesiąc. Najbezpieczniej przez portal klienta (rezygnacje mailowe są procesowane z opóźnieniem). Podać link do formularza?"`
-
-type Plan = { name: string; pricePLN: number; period: string; note?: string }
-type MarketEntry = {
-  id: string
-  name: string
-  category: string
-  plans: Plan[]
-  cancellation: {
-    method: string
-    url: string
-    noticePeriodDays: number
-    notes: string
-  }
-  alternatives: string[]
-}
-
-const MARKET = marketData as MarketEntry[]
 
 function findMarketOffer(query: string): MarketEntry | null {
   const q = query.toLowerCase().trim()

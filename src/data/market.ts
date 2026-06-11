@@ -1,0 +1,726 @@
+// Auto-generated from market.json — server-friendly TS module (no JSON import attrs).
+export interface MarketPlan { name: string; pricePLN: number; period: string; note?: string }
+export interface MarketEntry {
+  id: string
+  name: string
+  category: string
+  plans: MarketPlan[]
+  cancellation: { method: string; url: string; noticePeriodDays: number; notes: string }
+  alternatives: string[]
+}
+export const MARKET: MarketEntry[] = [
+  {
+    "id": "netflix",
+    "name": "Netflix",
+    "category": "VOD",
+    "plans": [
+      {
+        "name": "Standard z reklamami",
+        "pricePLN": 29.99,
+        "period": "month"
+      },
+      {
+        "name": "Standard",
+        "pricePLN": 57,
+        "period": "month"
+      },
+      {
+        "name": "Premium",
+        "pricePLN": 77,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.netflix.com/cancelplan",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie natychmiast w panelu konta. Dostęp do końca opłaconego okresu."
+    },
+    "alternatives": [
+      "disney_plus",
+      "hbo_max",
+      "skyshowtime",
+      "apple_tv_plus"
+    ]
+  },
+  {
+    "id": "disney_plus",
+    "name": "Disney+",
+    "category": "VOD",
+    "plans": [
+      {
+        "name": "Standard z reklamami",
+        "pricePLN": 28.99,
+        "period": "month"
+      },
+      {
+        "name": "Standard",
+        "pricePLN": 37.99,
+        "period": "month"
+      },
+      {
+        "name": "Premium",
+        "pricePLN": 49.99,
+        "period": "month"
+      },
+      {
+        "name": "Standard roczny",
+        "pricePLN": 379.9,
+        "period": "year"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.disneyplus.com/account/subscription",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu, dostęp do końca cyklu."
+    },
+    "alternatives": [
+      "netflix",
+      "hbo_max",
+      "apple_tv_plus"
+    ]
+  },
+  {
+    "id": "hbo_max",
+    "name": "HBO Max",
+    "category": "VOD",
+    "plans": [
+      {
+        "name": "Standard z reklamami",
+        "pricePLN": 25.99,
+        "period": "month"
+      },
+      {
+        "name": "Standard",
+        "pricePLN": 35.99,
+        "period": "month"
+      },
+      {
+        "name": "Premium",
+        "pricePLN": 45.99,
+        "period": "month"
+      },
+      {
+        "name": "Standard roczny",
+        "pricePLN": 259.9,
+        "period": "year"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://auth.max.com/subscription",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w ustawieniach subskrypcji."
+    },
+    "alternatives": [
+      "netflix",
+      "disney_plus",
+      "skyshowtime"
+    ]
+  },
+  {
+    "id": "skyshowtime",
+    "name": "SkyShowtime",
+    "category": "VOD",
+    "plans": [
+      {
+        "name": "Standard",
+        "pricePLN": 24.99,
+        "period": "month"
+      },
+      {
+        "name": "Premium",
+        "pricePLN": 34.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.skyshowtime.com/pl/account/manage-plan",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu konta."
+    },
+    "alternatives": [
+      "netflix",
+      "hbo_max",
+      "disney_plus"
+    ]
+  },
+  {
+    "id": "apple_tv_plus",
+    "name": "Apple TV+",
+    "category": "VOD",
+    "plans": [
+      {
+        "name": "Indywidualny",
+        "pricePLN": 39.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://tv.apple.com/account",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w Ustawieniach > Apple ID > Subskrypcje."
+    },
+    "alternatives": [
+      "netflix",
+      "disney_plus"
+    ]
+  },
+  {
+    "id": "spotify",
+    "name": "Spotify",
+    "category": "Muzyka",
+    "plans": [
+      {
+        "name": "Individual",
+        "pricePLN": 23.99,
+        "period": "month"
+      },
+      {
+        "name": "Duo",
+        "pricePLN": 30.99,
+        "period": "month"
+      },
+      {
+        "name": "Family",
+        "pricePLN": 37.99,
+        "period": "month"
+      },
+      {
+        "name": "Student",
+        "pricePLN": 11.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.spotify.com/account/subscription/",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu konta. Dostęp do końca opłaconego okresu."
+    },
+    "alternatives": [
+      "apple_music",
+      "tidal",
+      "youtube_premium"
+    ]
+  },
+  {
+    "id": "apple_music",
+    "name": "Apple Music",
+    "category": "Muzyka",
+    "plans": [
+      {
+        "name": "Indywidualny",
+        "pricePLN": 24.99,
+        "period": "month"
+      },
+      {
+        "name": "Rodzinny",
+        "pricePLN": 37.99,
+        "period": "month"
+      },
+      {
+        "name": "Student",
+        "pricePLN": 12.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://music.apple.com/account/subscriptions",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w Ustawieniach > Apple ID > Subskrypcje."
+    },
+    "alternatives": [
+      "spotify",
+      "tidal",
+      "youtube_premium"
+    ]
+  },
+  {
+    "id": "tidal",
+    "name": "Tidal",
+    "category": "Muzyka",
+    "plans": [
+      {
+        "name": "Individual",
+        "pricePLN": 21.99,
+        "period": "month"
+      },
+      {
+        "name": "Family",
+        "pricePLN": 32.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://tidal.com/account/subscription",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu konta."
+    },
+    "alternatives": [
+      "spotify",
+      "apple_music"
+    ]
+  },
+  {
+    "id": "youtube_premium",
+    "name": "YouTube Premium",
+    "category": "VOD + Muzyka",
+    "plans": [
+      {
+        "name": "Indywidualny",
+        "pricePLN": 27.99,
+        "period": "month"
+      },
+      {
+        "name": "Rodzinny",
+        "pricePLN": 49.99,
+        "period": "month"
+      },
+      {
+        "name": "Student",
+        "pricePLN": 14.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.youtube.com/paid_memberships",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu YouTube Premium."
+    },
+    "alternatives": [
+      "spotify",
+      "netflix"
+    ]
+  },
+  {
+    "id": "adobe_cc",
+    "name": "Adobe Creative Cloud",
+    "category": "Produktywność / Kreacja",
+    "plans": [
+      {
+        "name": "Photography (Photoshop + Lightroom)",
+        "pricePLN": 49.16,
+        "period": "month"
+      },
+      {
+        "name": "Single App",
+        "pricePLN": 113.96,
+        "period": "month"
+      },
+      {
+        "name": "All Apps",
+        "pricePLN": 296.96,
+        "period": "month"
+      },
+      {
+        "name": "All Apps roczny (z góry)",
+        "pricePLN": 2729.04,
+        "period": "year"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://account.adobe.com/plans",
+      "noticePeriodDays": 0,
+      "notes": "UWAGA: rezygnacja z planu rocznego po pierwszych 14 dniach = opłata 50% pozostałej kwoty. Plan miesięczny bez kar."
+    },
+    "alternatives": [
+      "canva",
+      "figma",
+      "affinity"
+    ]
+  },
+  {
+    "id": "canva",
+    "name": "Canva Pro",
+    "category": "Produktywność / Kreacja",
+    "plans": [
+      {
+        "name": "Pro (1 osoba)",
+        "pricePLN": 54.99,
+        "period": "month"
+      },
+      {
+        "name": "Pro roczny",
+        "pricePLN": 449.99,
+        "period": "year"
+      },
+      {
+        "name": "Teams (od 3 osób)",
+        "pricePLN": 39.99,
+        "period": "month_per_user"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.canva.com/settings/billing-and-plans",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu, dostęp do końca okresu rozliczeniowego."
+    },
+    "alternatives": [
+      "adobe_cc",
+      "figma"
+    ]
+  },
+  {
+    "id": "figma",
+    "name": "Figma",
+    "category": "Produktywność / Kreacja",
+    "plans": [
+      {
+        "name": "Starter",
+        "pricePLN": 0,
+        "period": "month"
+      },
+      {
+        "name": "Professional",
+        "pricePLN": 60,
+        "period": "month_per_user"
+      },
+      {
+        "name": "Organization",
+        "pricePLN": 180,
+        "period": "month_per_user"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.figma.com/settings",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w ustawieniach zespołu."
+    },
+    "alternatives": [
+      "adobe_cc",
+      "canva"
+    ]
+  },
+  {
+    "id": "chatgpt_plus",
+    "name": "ChatGPT Plus",
+    "category": "AI",
+    "plans": [
+      {
+        "name": "Plus",
+        "pricePLN": 80,
+        "period": "month",
+        "note": "~$20 USD, kurs zmienny"
+      },
+      {
+        "name": "Pro",
+        "pricePLN": 800,
+        "period": "month",
+        "note": "~$200 USD"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://chat.openai.com/#settings/Subscription",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w Settings > Subscription. Cena rozliczana w USD."
+    },
+    "alternatives": [
+      "claude_pro",
+      "gemini_advanced"
+    ]
+  },
+  {
+    "id": "claude_pro",
+    "name": "Claude Pro",
+    "category": "AI",
+    "plans": [
+      {
+        "name": "Pro",
+        "pricePLN": 80,
+        "period": "month",
+        "note": "~$20 USD"
+      },
+      {
+        "name": "Max 5x",
+        "pricePLN": 400,
+        "period": "month",
+        "note": "~$100 USD"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://claude.ai/settings/billing",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu billingu."
+    },
+    "alternatives": [
+      "chatgpt_plus",
+      "gemini_advanced"
+    ]
+  },
+  {
+    "id": "microsoft_365",
+    "name": "Microsoft 365",
+    "category": "Produktywność",
+    "plans": [
+      {
+        "name": "Personal",
+        "pricePLN": 29.99,
+        "period": "month"
+      },
+      {
+        "name": "Personal roczny",
+        "pricePLN": 299.99,
+        "period": "year"
+      },
+      {
+        "name": "Family (do 6 osób)",
+        "pricePLN": 39.99,
+        "period": "month"
+      },
+      {
+        "name": "Family roczny",
+        "pricePLN": 399.99,
+        "period": "year"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://account.microsoft.com/services",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu konta Microsoft."
+    },
+    "alternatives": [
+      "google_workspace",
+      "icloud_plus"
+    ]
+  },
+  {
+    "id": "icloud_plus",
+    "name": "iCloud+",
+    "category": "Chmura",
+    "plans": [
+      {
+        "name": "50 GB",
+        "pricePLN": 4.99,
+        "period": "month"
+      },
+      {
+        "name": "200 GB",
+        "pricePLN": 14.99,
+        "period": "month"
+      },
+      {
+        "name": "2 TB",
+        "pricePLN": 49.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://appleid.apple.com",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w Ustawieniach > Apple ID > iCloud. UWAGA: zmniejszenie planu = ryzyko utraty danych powyżej limitu."
+    },
+    "alternatives": [
+      "google_one",
+      "dropbox"
+    ]
+  },
+  {
+    "id": "google_one",
+    "name": "Google One",
+    "category": "Chmura",
+    "plans": [
+      {
+        "name": "100 GB",
+        "pricePLN": 7.99,
+        "period": "month"
+      },
+      {
+        "name": "200 GB",
+        "pricePLN": 11.99,
+        "period": "month"
+      },
+      {
+        "name": "2 TB",
+        "pricePLN": 39.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://one.google.com/storage",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu Google One."
+    },
+    "alternatives": [
+      "icloud_plus",
+      "dropbox"
+    ]
+  },
+  {
+    "id": "audible",
+    "name": "Audible",
+    "category": "Audiobooki",
+    "plans": [
+      {
+        "name": "Premium Plus",
+        "pricePLN": 49.9,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.audible.com/account/membership-details",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu konta. Można też zawiesić członkostwo do 3 mies."
+    },
+    "alternatives": [
+      "storytel",
+      "legimi",
+      "empik_go"
+    ]
+  },
+  {
+    "id": "storytel",
+    "name": "Storytel",
+    "category": "Audiobooki",
+    "plans": [
+      {
+        "name": "Single",
+        "pricePLN": 49.9,
+        "period": "month"
+      },
+      {
+        "name": "Family",
+        "pricePLN": 69.9,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.storytel.com/pl/profile/subscription",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w panelu konta."
+    },
+    "alternatives": [
+      "audible",
+      "legimi",
+      "empik_go"
+    ]
+  },
+  {
+    "id": "legimi",
+    "name": "Legimi",
+    "category": "Audiobooki / Ebooki",
+    "plans": [
+      {
+        "name": "Bez limitów (8 godz./mies. + książki)",
+        "pricePLN": 49.99,
+        "period": "month"
+      },
+      {
+        "name": "Pakiet 4 godz.",
+        "pricePLN": 32.99,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "self-service",
+      "url": "https://www.legimi.pl/strefa-czytelnika/abonament/",
+      "noticePeriodDays": 0,
+      "notes": "Anulowanie w strefie czytelnika."
+    },
+    "alternatives": [
+      "audible",
+      "storytel",
+      "empik_go"
+    ]
+  },
+  {
+    "id": "zdrofit",
+    "name": "Zdrofit",
+    "category": "Fitness",
+    "plans": [
+      {
+        "name": "OPEN",
+        "pricePLN": 199,
+        "period": "month"
+      },
+      {
+        "name": "OPEN PREMIUM",
+        "pricePLN": 249,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "form",
+      "url": "https://zdrofit.pl/strefa-klubowicza",
+      "noticePeriodDays": 30,
+      "notes": "WAŻNE: miesięczne wypowiedzenie ze skutkiem na koniec miesiąca kalendarzowego. Składaj przez portal klienta, nie mailem (mailowe są procesowane z opóźnieniem). Składając dziś — zapłacisz za kolejny pełny miesiąc."
+    },
+    "alternatives": [
+      "multisport",
+      "calypso",
+      "medicover_sport"
+    ]
+  },
+  {
+    "id": "multisport",
+    "name": "Multisport",
+    "category": "Fitness",
+    "plans": [
+      {
+        "name": "Plus (przez pracodawcę)",
+        "pricePLN": 150,
+        "period": "month",
+        "note": "Cena zależna od dofinansowania pracodawcy"
+      },
+      {
+        "name": "Classic (bez pracodawcy)",
+        "pricePLN": 230,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "via-employer",
+      "url": "https://kartamultisport.pl",
+      "noticePeriodDays": 30,
+      "notes": "Najczęściej rezygnacja przez dział HR pracodawcy. Indywidualnie — formularz w panelu Klienta, 1 mies. wypowiedzenia."
+    },
+    "alternatives": [
+      "zdrofit",
+      "medicover_sport",
+      "ok_system"
+    ]
+  },
+  {
+    "id": "medicover_sport",
+    "name": "Medicover Sport",
+    "category": "Fitness",
+    "plans": [
+      {
+        "name": "Aktywny",
+        "pricePLN": 165,
+        "period": "month"
+      },
+      {
+        "name": "Aktywny Plus",
+        "pricePLN": 235,
+        "period": "month"
+      }
+    ],
+    "cancellation": {
+      "method": "via-employer",
+      "url": "https://medicoversport.pl",
+      "noticePeriodDays": 30,
+      "notes": "Zazwyczaj przez pracodawcę. Wypowiedzenie do końca miesiąca."
+    },
+    "alternatives": [
+      "multisport",
+      "zdrofit"
+    ]
+  }
+];
