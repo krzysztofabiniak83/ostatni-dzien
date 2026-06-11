@@ -32,14 +32,21 @@ ZASADY (BEZWZGLĘDNE):
    - pytania o subskrypcje usera → get_user_subscriptions
    - pytania o usługi z rynku (alternatywy, ceny, anulowanie) → get_market_offer
    - "dodaj X za Y zł", "zapisz", "wpisz nową" → add_subscription (domyślnie miesięczny renewal, data startu = dziś)
-   - "anuluj X", "zapauzuj X", "wznów X", "zrezygnowałem z X" → change_subscription_status
+   - "anuluj X", "zapauzuj X", "wznów X", "zrezygnowałem z X" → change_subscription_status (status zmienia się, wiersz ZOSTAJE w bazie)
+   - "usuń X", "skasuj X", "wyrzuć", "usuń ostatni wpis", "usuń wszystkie X" → delete_subscription (FIZYCZNIE kasuje wiersz/wiersze z bazy)
 8. Język: polski. Formatowanie: Markdown (bold, listy).
 9. Nie udzielaj porad prawnych ani finansowych. Doradzasz wyłącznie w temacie subskrypcji.
 10. ZARZĄDZANIE SUBSKRYPCJAMI — zasady bezwzględne:
     - Kwota, data i nazwa pochodzą z wiadomości usera. NIE zastępuj ich "aktualną wiedzą" o cenniku (np. "Netflix kosztuje teraz 37 zł" — zabronione, nawet jeżeli tak myślisz). User napisał 29 zł → użyj 29 zł.
-    - Jeżeli user nie podał kwoty przy dodawaniu — DOPYTAJ, nie zgaduj z pamięci.
-    - Przy change_subscription_status najpierw użyj get_user_subscriptions, dopasuj po nazwie case-insensitive (skróty i literówki OK). Jeżeli pasuje wiele lub zero — powiedz to wprost i poproś o doprecyzowanie.
-    - Po każdej zmianie potwierdź krótko co zaszło (nazwa + kwota/data albo nazwa + nowy status). Tool sam weryfikuje zapis — jeżeli zwróci błąd, powiedz to userowi, nie udawaj sukcesu.
+    - PRZY DODAWANIU obowiązkowo dopytuj o brakujące dane ZANIM wywołasz add_subscription:
+        • brak kwoty → "Ile to kosztuje miesięcznie? (np. 29,99 zł)"
+        • brak daty/dnia odnowienia, gdy user nie powiedział "dziś" / "od dziś" → "Kiedy następne pobranie? (np. dziś, za 5 dni, 25 czerwca)"
+        • brak nazwy → "Jakiej usługi to dotyczy?"
+      Zadaj WSZYSTKIE brakujące pytania w JEDNEJ wiadomości (bullet listą). Dopiero gdy masz komplet — wywołaj tool.
+    - Anuluj/pauza vs Usuń — to różne operacje. Anulowanie zmienia status (subskrypcja zostaje w bazie z tagiem cancelled, można ją zobaczyć i wznowić). Usuwanie fizycznie kasuje wiersz (nieodwracalne). Domyślnie przy "rezygnuję", "anuluj", "zrezygnowałem" → change_subscription_status. Tylko gdy user wprost mówi "usuń/skasuj/wyrzuć" → delete_subscription.
+    - Przy change_subscription_status / delete_subscription najpierw użyj get_user_subscriptions, dopasuj po nazwie case-insensitive (skróty i literówki OK). Jeżeli pasuje wiele i user nie powiedział wprost "wszystkie" — pokaż listę i zapytaj o doprecyzowanie. "Usuń wszystkie X" → wywołaj delete_subscription z all=true.
+    - "Ostatni wpis" / "ostatnio dodane" → użyj nameQuery=null, last=true (tool wybiera najnowszy wiersz).
+    - Po każdej zmianie potwierdź krótko co zaszło. Tool sam weryfikuje zapis — jeżeli zwróci błąd, powiedz to userowi, nie udawaj sukcesu.
 
 PRZYKŁAD STYLU:
 U: "Jak zrezygnować ze Zdrofitu?"
@@ -105,6 +112,23 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           type: { type: 'string', enum: ['trial', 'renewal'], description: 'trial tylko przy wyraźnym sygnale ("okres próbny", "darmowy miesiąc"). Default: renewal.', default: 'renewal' },
         },
         required: ['name', 'amountPLN'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'delete_subscription',
+      description:
+        'FIZYCZNIE kasuje wiersz/wiersze z tabeli subscriptions (nieodwracalne). Używaj TYLKO gdy user mówi wprost "usuń/skasuj/wyrzuć". Dla "anuluj/zrezygnowałem" użyj change_subscription_status. Tryby: id (konkretny wiersz), nameQuery (najpierw 1 dopasowanie lub all=true), last=true (najnowszy wiersz usera). Tool weryfikuje SELECT-em że wierszy już nie ma.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', description: 'Dokładne id (z get_user_subscriptions).' },
+          nameQuery: { type: 'string', description: 'Fragment nazwy (case-insensitive) do dopasowania.' },
+          last: { type: 'boolean', description: 'true = usuń najnowszy wiersz usera (po created_at).' },
+          all: { type: 'boolean', description: 'true = przy nameQuery skasuj WSZYSTKIE dopasowania (gdy user mówi "wszystkie X"). false (default) = wymaga pojedynczego dopasowania.' },
+        },
       },
     },
   },
@@ -362,6 +386,72 @@ ${listSnapshot || '(pusta)'}`
                 result = verify
                   ? { ok: true, saved: verify }
                   : { error: 'Wiersz nie znaleziony po INSERT — operacja nie potwierdzona.' }
+              }
+            }
+          } else if (tc.name === 'delete_subscription') {
+            const args = JSON.parse(tc.args || '{}') as {
+              id?: string
+              nameQuery?: string
+              last?: boolean
+              all?: boolean
+            }
+            let targets: { id: string; name: string }[] = []
+            if (args.id) {
+              const { data } = await supabase
+                .from('subscriptions')
+                .select('id,name')
+                .eq('user_id', userId)
+                .eq('id', args.id)
+              targets = data ?? []
+            } else if (args.last) {
+              const { data } = await supabase
+                .from('subscriptions')
+                .select('id,name')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+              targets = data ?? []
+            } else if (args.nameQuery) {
+              const { data } = await supabase
+                .from('subscriptions')
+                .select('id,name')
+                .eq('user_id', userId)
+                .ilike('name', `%${args.nameQuery}%`)
+              const matches = data ?? []
+              if (matches.length === 0) {
+                result = { error: `Brak subskrypcji pasującej do "${args.nameQuery}".` }
+              } else if (matches.length > 1 && !args.all) {
+                result = {
+                  error: 'Wiele dopasowań — doprecyzuj (id) albo potwierdź "wszystkie".',
+                  candidates: matches,
+                }
+              } else {
+                targets = matches
+              }
+            } else {
+              result = { error: 'Podaj id, nameQuery albo last=true.' }
+            }
+            if (targets.length > 0 && !(result as { error?: string } | null)?.error) {
+              const ids = targets.map((t) => t.id)
+              const { error: delErr } = await supabase
+                .from('subscriptions')
+                .delete()
+                .eq('user_id', userId)
+                .in('id', ids)
+              if (delErr) {
+                result = { error: `DELETE nieudany: ${delErr.message}` }
+              } else {
+                // Weryfikacja: żaden z ids nie powinien istnieć.
+                const { data: leftover } = await supabase
+                  .from('subscriptions')
+                  .select('id')
+                  .eq('user_id', userId)
+                  .in('id', ids)
+                if (leftover && leftover.length > 0) {
+                  result = { error: 'Nie wszystkie wiersze zostały skasowane.', leftover }
+                } else {
+                  result = { ok: true, deleted: targets }
+                }
               }
             }
           } else if (tc.name === 'change_subscription_status') {
