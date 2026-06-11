@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import { LifeBuoy, LogOut, Mail, MessageSquare } from 'lucide-react'
 import { signOut } from '../../lib/auth'
+import { supabase } from '../../lib/supabase'
 import { Toggle } from '../ui/Toggle'
 import { MessageSheet } from './MessageSheet'
 import { useSettings, type Currency, type ReminderDays } from '../../store/settings'
@@ -126,6 +127,31 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   const { notify, reminderDays, currency, setNotify, setReminderDays, setCurrency } = useSettings()
   const resetOnboarding = useOnboarding((s) => s.reset)
   const [messageOpen, setMessageOpen] = useState(false)
+  const [token, setToken] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  const handleShowToken = async () => {
+    const { data } = await supabase.auth.getSession()
+    const t = data.session?.access_token
+    if (!t) {
+      alert('Brak aktywnej sesji — zaloguj się ponownie.')
+      return
+    }
+    setToken(t)
+    setCopied(false)
+  }
+
+  const handleCopyToken = async () => {
+    if (!token) return
+    try {
+      await navigator.clipboard.writeText(token)
+      setCopied(true)
+    } catch {
+      // fallback: zaznacz textareę, user kopiuje ręcznie Cmd+C
+      const el = document.getElementById('token-textarea') as HTMLTextAreaElement | null
+      el?.select()
+    }
+  }
 
   const handleRestartOnboarding = () => {
     onClose()
@@ -270,7 +296,10 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                   <div className="border-b border-hairline">
                     <NavRow label="Regulamin" disabled badge="Wkrótce" />
                   </div>
-                  <NavRow label="Dokumentacja API" href="/docs" />
+                  <div className="border-b border-hairline">
+                    <NavRow label="Dokumentacja API" href="/docs" />
+                  </div>
+                  <NavRow label="Mój token API (do testów)" onClick={handleShowToken} />
                 </div>
               </div>
 
@@ -306,6 +335,57 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
         to={FEEDBACK_EMAIL}
         fallbackTo={FEEDBACK_EMAIL}
       />
+
+      {token && (
+        <motion.div
+          className="absolute inset-0 z-[400] flex items-center justify-center px-5"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <div
+            className="absolute inset-0 bg-ink-primary/40"
+            onClick={() => setToken(null)}
+          />
+          <motion.div
+            className="relative w-full max-w-[340px] rounded-xl bg-bg-card p-5 shadow-2xl"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.2, ease: [0.34, 1.56, 0.64, 1] }}
+          >
+            <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+              Token API
+            </div>
+            <h3 className="mb-3 font-serif text-[20px] text-ink-primary">Twój token do testów</h3>
+            <p className="mb-3 text-[13px] leading-relaxed text-ink-secondary">
+              Wklej go w nagłówku <span className="font-mono text-[12px]">Authorization: Bearer …</span> przy
+              wywołaniu API. Token wygasa po ~1 godzinie — wtedy po prostu wygeneruj nowy.
+            </p>
+            <textarea
+              id="token-textarea"
+              readOnly
+              value={token}
+              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+              className="mb-3 h-24 w-full resize-none rounded-md border border-hairline bg-bg-subtle p-2 font-mono text-[11px] leading-relaxed text-ink-primary"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleCopyToken}
+                className="flex-1 rounded-md bg-accent px-4 py-2.5 text-[14px] font-medium text-bg-base transition-all hover:bg-accent-hover active:scale-[0.98]"
+              >
+                {copied ? '✓ Skopiowane' : 'Skopiuj do schowka'}
+              </button>
+              <button
+                onClick={() => setToken(null)}
+                className="rounded-md border border-hairline px-4 py-2.5 text-[14px] text-ink-secondary transition-colors hover:bg-bg-subtle"
+              >
+                Zamknij
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </AnimatePresence>
   )
 }
