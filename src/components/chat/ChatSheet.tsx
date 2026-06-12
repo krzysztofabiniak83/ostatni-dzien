@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm'
 import { AskBar } from './AskBar'
 import { ActionChips } from './ActionChips'
 import { WelcomeIntro } from './WelcomeIntro'
+import { JournalView } from './JournalView'
 import { supabase } from '../../lib/supabase'
 import { useSubscriptions } from '../../store/subscriptions'
 
@@ -39,6 +40,7 @@ export function ChatSheet({
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [journalOpen, setJournalOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const sentInitialRef = useRef(false)
@@ -54,6 +56,7 @@ export function ChatSheet({
     if (!open) {
       setMessages([])
       setError(null)
+      setJournalOpen(false)
       sentInitialRef.current = false
       abortRef.current?.abort()
     }
@@ -202,15 +205,30 @@ export function ChatSheet({
                   Subskrypcik
                 </div>
               </div>
-              <button
-                aria-label="Zamknij"
-                onClick={onClose}
-                className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-hairline text-ink-secondary transition-colors hover:border-ink-tertiary"
-              >
-                <svg viewBox="0 0 24 24" className="h-[16px] w-[16px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  aria-label="Otwórz dzienniczek rozmów"
+                  onClick={() => setJournalOpen(true)}
+                  className="flex h-[34px] items-center gap-1.5 rounded-full border border-hairline px-2.5 text-ink-secondary transition-colors hover:border-ink-tertiary"
+                >
+                  <svg viewBox="0 0 24 24" className="h-[15px] w-[15px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4.5" width="18" height="17" rx="2.5" />
+                    <path d="M3 9h18M8 3v3M16 3v3" />
+                  </svg>
+                  <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-ink-tertiary">
+                    Dzienniczek
+                  </span>
+                </button>
+                <button
+                  aria-label="Zamknij"
+                  onClick={onClose}
+                  className="flex h-[34px] w-[34px] items-center justify-center rounded-full border border-hairline text-ink-secondary transition-colors hover:border-ink-tertiary"
+                >
+                  <svg viewBox="0 0 24 24" className="h-[16px] w-[16px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             {/* Messages scroll */}
@@ -249,6 +267,8 @@ export function ChatSheet({
                 disabled={streaming}
               />
             </div>
+
+            <JournalView open={journalOpen} onClose={() => setJournalOpen(false)} />
           </motion.div>
         </>
       )}

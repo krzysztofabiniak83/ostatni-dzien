@@ -179,7 +179,7 @@ export function WelcomeIntro() {
           Cześć, jestem <span className="italic text-accent">Subskrypcik</span>
         </h2>
         <p className="text-[14px] leading-[1.5] text-ink-secondary">
-          Twój doradca subskrypcji. Pomogę porównać plany, podpowiem jak anulować i wskażę gdzie tracisz pieniądze.
+          Pomogę Ci ogarnąć subskrypcje: porównać plany, anulować zbędne usługi i znaleźć ukryte koszty. Prowadzę też dzienniczek z kalendarzem oraz krótkimi podsumowaniami naszych rozmów i Twoich zapytań.
         </p>
         <p className="mt-3 text-[12px] text-ink-tertiary">
           Wybierz jedno z pytań poniżej albo zapytaj wprost.

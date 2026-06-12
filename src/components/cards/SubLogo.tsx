@@ -101,7 +101,7 @@ export function SubLogo({ logoClass, logoText, size = 'sm' }: SubLogoProps) {
         'flex flex-shrink-0 items-center justify-center',
         isLg
           ? 'mx-auto mb-5 h-[72px] w-[72px] rounded-[20px] shadow-[0_8px_24px_-8px_rgba(13,31,26,0.15)]'
-          : 'h-10 w-10 rounded-[11px]',
+          : 'h-11 w-11 rounded-[12px]',
         isTextual && (style.sans ? 'font-sans' : 'font-serif'),
         isTextual && (style.weight ?? 'font-normal'),
         isTextual && style.italic && 'italic',

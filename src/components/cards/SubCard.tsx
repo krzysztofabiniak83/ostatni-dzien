@@ -3,6 +3,11 @@ import { Tag } from '../ui/Tag'
 import { SubLogo } from './SubLogo'
 import type { Subscription } from '../../types/subscription'
 import { useFormatAmount } from '../../utils/currency'
+import {
+  CATEGORY_META,
+  CATEGORY_SHORT_LABEL,
+  categorizeSubscription,
+} from '../../data/journal'
 
 interface SubCardProps {
   sub: Subscription
@@ -29,12 +34,14 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
   const isCritical = sub.urgency === 'critical' || isToday
   // Część czasowa daty, np. "Dziś · 23:59" → "23:59".
   const timePart = sub.date.split('· ')[1]?.trim()
+  const category = categorizeSubscription(sub.name)
+  const categoryMeta = CATEGORY_META[category]
 
   return (
     <div
       onClick={() => onClick?.(sub)}
       className={clsx(
-        'relative grid cursor-pointer grid-cols-[72px_1fr_44px] items-center gap-[14px]',
+        'relative grid cursor-pointer grid-cols-[72px_1fr_48px] items-center gap-[14px]',
         'rounded-[18px] border border-hairline bg-bg-card p-[18px] pl-5',
         'transition-all duration-150 hover:border-ink-tertiary active:scale-[0.985]',
         isCritical && 'border-l-[3px] border-l-alert',
@@ -103,8 +110,22 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
         </div>
       </div>
 
-      {/* Logo */}
-      <SubLogo logoClass={sub.logoClass} logoText={sub.logoText} />
+      {/* Kategoria — pill w prawym górnym rogu */}
+      <span
+        className={clsx(
+          'absolute right-3 top-3 rounded-pill px-2 py-[3px]',
+          'font-mono text-[8.5px] uppercase tracking-[0.12em]',
+          categoryMeta.pillClass,
+        )}
+        aria-label={`Kategoria: ${categoryMeta.label}`}
+      >
+        {CATEGORY_SHORT_LABEL[category]}
+      </span>
+
+      {/* Logo — wyrównane do prawej-dolnej krawędzi karty */}
+      <div className="flex h-full items-end justify-end self-stretch translate-y-1">
+        <SubLogo logoClass={sub.logoClass} logoText={sub.logoText} />
+      </div>
 
       {/* Badge „NOWY" — widoczny tylko przez czas highlightu (~2.2s) */}
       {highlight && (

@@ -1,0 +1,265 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import {
+  CATEGORY_META,
+  MOCK_JOURNAL,
+  groupByDate,
+  type JournalEntry,
+} from '../../data/journal'
+
+/**
+ * Dzienniczek Rozmów — pełnoekranowa nakładka wewnątrz ChatSheet.
+ * - U góry: poziomy kalendarz karuzelowy (scroll-snap na dni).
+ *   Dni bez wpisów = opacity 0.4 i nieinteraktywne; auto-snap do najbliższego dnia z wpisem.
+ * - Poniżej: wertykalna lista kart konwersacji dla wybranego dnia.
+ */
+
+const PL_MONTHS = [
+  'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec',
+  'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień',
+]
+const PL_WEEKDAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb']
+
+/** Generuje listę 30 dni wstecz + dziś (najstarsze pierwsze). */
+function buildDayWindow(): string[] {
+  const out: string[] = []
+  const today = new Date()
+  for (let i = 30; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    out.push(d.toISOString().slice(0, 10))
+  }
+  return out
+}
+
+export function JournalView({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const reduce = useReducedMotion()
+  const grouped = useMemo(() => groupByDate(MOCK_JOURNAL), [])
+  const days = useMemo(buildDayWindow, [])
+  const daysWithEntries = useMemo(
+    () => new Set(Object.keys(grouped)),
+    [grouped],
+  )
+
+  // Aktywny dzień — domyślnie najnowszy z wpisami.
+  const newestWithEntries = useMemo(() => {
+    for (let i = days.length - 1; i >= 0; i--) {
+      if (daysWithEntries.has(days[i])) return days[i]
+    }
+    return days[days.length - 1]
+  }, [days, daysWithEntries])
+  const [active, setActive] = useState<string>(newestWithEntries)
+
+  // Reset wyboru przy otwarciu.
+  useEffect(() => {
+    if (open) setActive(newestWithEntries)
+  }, [open, newestWithEntries])
+
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const dayRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const snapTimerRef = useRef<number | null>(null)
+
+  // Po otwarciu — scroll aktywnego dnia do środka (bez animacji przy pierwszym renderze).
+  useEffect(() => {
+    if (!open) return
+    const node = dayRefs.current[active]
+    if (node) node.scrollIntoView({ inline: 'center', block: 'nearest' })
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Po scrollu — znajdź dzień najbliżej środka i, jeśli pusty, snapuj do najbliższego z wpisem. */
+  function handleScroll() {
+    if (snapTimerRef.current) window.clearTimeout(snapTimerRef.current)
+    snapTimerRef.current = window.setTimeout(() => {
+      const scroller = scrollerRef.current
+      if (!scroller) return
+      const center = scroller.getBoundingClientRect().left + scroller.clientWidth / 2
+
+      let nearest: { date: string; dist: number } | null = null
+      for (const date of days) {
+        const node = dayRefs.current[date]
+        if (!node) continue
+        const r = node.getBoundingClientRect()
+        const c = r.left + r.width / 2
+        const dist = Math.abs(c - center)
+        if (!nearest || dist < nearest.dist) nearest = { date, dist }
+      }
+      if (!nearest) return
+
+      // Jeśli pusty → znajdź najbliższy dzień z wpisem.
+      let target = nearest.date
+      if (!daysWithEntries.has(target)) {
+        const idx = days.indexOf(target)
+        let best: { date: string; gap: number } | null = null
+        for (let i = 0; i < days.length; i++) {
+          if (!daysWithEntries.has(days[i])) continue
+          const gap = Math.abs(i - idx)
+          if (!best || gap < best.gap) best = { date: days[i], gap }
+        }
+        if (best) target = best.date
+      }
+
+      if (target !== active) setActive(target)
+      const node = dayRefs.current[target]
+      if (node) node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    }, 120)
+  }
+
+  function selectDay(date: string) {
+    if (!daysWithEntries.has(date)) return
+    setActive(date)
+    const node = dayRefs.current[date]
+    if (node) node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }
+
+  const activeEntries = grouped[active] ?? []
+  const activeDate = new Date(active + 'T00:00:00')
+  const monthLabel = `${PL_MONTHS[activeDate.getMonth()]} ${activeDate.getFullYear()}`
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          key="journal"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 12 }}
+          transition={{ duration: reduce ? 0 : 0.22, ease: [0.32, 0.72, 0, 1] }}
+          className="absolute inset-0 z-[30] flex flex-col bg-bg-base"
+        >
+          {/* Header dzienniczka */}
+          <div className="flex items-center justify-between px-5 pt-3 pb-2">
+            <button
+              onClick={onClose}
+              className="flex h-[34px] items-center gap-1.5 rounded-full border border-hairline pl-2 pr-3 text-ink-secondary transition-colors hover:border-ink-tertiary"
+              aria-label="Wróć do czatu"
+            >
+              <svg viewBox="0 0 24 24" className="h-[16px] w-[16px]" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              <span className="text-[13px]">Czat</span>
+            </button>
+            <div className="text-center">
+              <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+                Dzienniczek
+              </div>
+              <div className="font-serif text-[18px] leading-tight text-ink-primary">
+                {monthLabel}
+              </div>
+            </div>
+            <div className="h-[34px] w-[64px]" aria-hidden />
+          </div>
+
+          {/* Kalendarz karuzelowy */}
+          <div className="border-b border-hairline pb-3">
+            <div
+              ref={scrollerRef}
+              onScroll={handleScroll}
+              className="flex gap-2 overflow-x-auto px-5 pt-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              style={{ scrollSnapType: 'x mandatory' }}
+            >
+              {days.map((date) => {
+                const d = new Date(date + 'T00:00:00')
+                const has = daysWithEntries.has(date)
+                const isActive = date === active
+                return (
+                  <button
+                    key={date}
+                    ref={(el) => {
+                      dayRefs.current[date] = el
+                    }}
+                    onClick={() => selectDay(date)}
+                    disabled={!has}
+                    aria-pressed={isActive}
+                    aria-label={`${d.getDate()} ${PL_MONTHS[d.getMonth()]}${has ? '' : ' (brak wpisów)'}`}
+                    className={[
+                      'flex h-[64px] min-w-[52px] flex-shrink-0 flex-col items-center justify-center rounded-2xl border transition-all',
+                      isActive
+                        ? 'border-accent bg-accent text-bg-base shadow-[0_6px_20px_-8px_rgba(31,61,51,0.5)]'
+                        : has
+                          ? 'border-hairline bg-bg-card text-ink-primary hover:border-ink-tertiary'
+                          : 'border-transparent bg-transparent text-ink-tertiary',
+                      !has && 'opacity-40 cursor-not-allowed',
+                    ].join(' ')}
+                    style={{ scrollSnapAlign: 'center' }}
+                  >
+                    <span
+                      className={[
+                        'font-mono text-[9px] uppercase tracking-[0.14em]',
+                        isActive ? 'text-bg-base/80' : 'text-ink-tertiary',
+                      ].join(' ')}
+                    >
+                      {PL_WEEKDAYS[d.getDay()]}
+                    </span>
+                    <span className="font-serif text-[22px] leading-none mt-1">
+                      {d.getDate()}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Lista kart */}
+          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={active}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: reduce ? 0 : 0.18, ease: [0.32, 0.72, 0, 1] }}
+                className="space-y-3"
+              >
+                {activeEntries.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  activeEntries.map((e) => <EntryCard key={e.id} entry={e} />)
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
+
+function EntryCard({ entry }: { entry: JournalEntry }) {
+  const meta = CATEGORY_META[entry.category]
+  return (
+    <article
+      className="rounded-2xl border border-hairline bg-bg-card p-4"
+      style={{ boxShadow: '0 2px 8px -4px rgba(13,31,26,0.06)' }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+          {entry.startTime} — {entry.endTime}
+        </span>
+        <span
+          className={`rounded-pill px-2.5 py-[3px] font-mono text-[9px] uppercase tracking-[0.12em] ${meta.pillClass}`}
+        >
+          {meta.label}
+        </span>
+      </div>
+      <h3 className="mt-3 font-serif text-[18px] leading-snug text-ink-primary">
+        {entry.title}
+      </h3>
+      <p className="mt-2 text-[13.5px] leading-[1.55] text-ink-secondary">
+        {entry.summary}
+      </p>
+    </article>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="mt-10 flex flex-col items-center text-center">
+      <div className="font-serif text-[18px] text-ink-primary">
+        Brak rozmów tego dnia
+      </div>
+      <p className="mt-2 max-w-[240px] text-[13px] leading-[1.5] text-ink-secondary">
+        Wybierz inny dzień z karuzeli powyżej — kalendarz pominie dni puste automatycznie.
+      </p>
+    </div>
+  )
+}
