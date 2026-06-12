@@ -44,6 +44,9 @@ export function ChatSheet({
   const scrollRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const sentInitialRef = useRef(false)
+  const sessionStartRef = useRef<Date | null>(null)
+  const messagesRef = useRef<ChatMessage[]>([])
+  messagesRef.current = messages
 
   // Auto-scroll na dół przy nowych wiadomościach / chunkach.
   useEffect(() => {
@@ -51,15 +54,24 @@ export function ChatSheet({
     if (el) el.scrollTop = el.scrollHeight
   }, [messages, streaming])
 
-  // Po zamknięciu reset (sesja-only, zgodnie z PRD).
+  // Po zamknięciu: finalizacja sesji do dzienniczka (fire-and-forget) + reset.
   useEffect(() => {
-    if (!open) {
-      setMessages([])
-      setError(null)
-      setJournalOpen(false)
-      sentInitialRef.current = false
-      abortRef.current?.abort()
+    if (open) {
+      sessionStartRef.current = new Date()
+      return
     }
+    // Sheet zamknięty — jeżeli były wiadomości, wyślij do /api/journal (gating min. 4 wiadomości po stronie API).
+    const captured = messagesRef.current
+    const startedAt = sessionStartRef.current
+    if (captured.length > 0 && startedAt) {
+      void finalizeConversation(captured, startedAt)
+    }
+    setMessages([])
+    setError(null)
+    setJournalOpen(false)
+    sentInitialRef.current = false
+    sessionStartRef.current = null
+    abortRef.current?.abort()
   }, [open])
 
   async function send(prompt: string) {
@@ -274,6 +286,35 @@ export function ChatSheet({
       )}
     </AnimatePresence>
   )
+}
+
+/**
+ * Wysyła zamkniętą sesję do /api/journal w trybie finalize.
+ * Backend sam decyduje czy zapisać (≥4 wiadomości) — błędy ignorujemy,
+ * to operacja tła i nie powinna blokować zamknięcia czatu.
+ */
+async function finalizeConversation(messages: ChatMessage[], startedAt: Date) {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData.session?.access_token
+    if (!token) return
+    await fetch('/api/journal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        action: 'finalize',
+        messages,
+        startedAt: startedAt.toISOString(),
+        endedAt: new Date().toISOString(),
+      }),
+      keepalive: true,
+    })
+  } catch {
+    /* best-effort */
+  }
 }
 
 function MessageBubble({

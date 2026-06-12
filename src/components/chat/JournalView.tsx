@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import {
-  CATEGORY_META,
-  MOCK_JOURNAL,
-  groupByDate,
-  type JournalEntry,
-} from '../../data/journal'
+import { CATEGORY_META, groupByDate, type JournalEntry } from '../../data/journal'
+import { supabase } from '../../lib/supabase'
 
 /**
  * Dzienniczek Rozmów — pełnoekranowa nakładka wewnątrz ChatSheet.
@@ -34,12 +30,68 @@ function buildDayWindow(): string[] {
 
 export function JournalView({ open, onClose }: { open: boolean; onClose: () => void }) {
   const reduce = useReducedMotion()
-  const grouped = useMemo(() => groupByDate(MOCK_JOURNAL), [])
+  const [entries, setEntries] = useState<JournalEntry[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const grouped = useMemo(() => groupByDate(entries), [entries])
   const days = useMemo(buildDayWindow, [])
   const daysWithEntries = useMemo(
     () => new Set(Object.keys(grouped)),
     [grouped],
   )
+
+  // Pobranie realnych konwersacji po otwarciu dzienniczka.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    setLoading(true)
+    setLoadError(null)
+    ;(async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData.session?.access_token
+        if (!token) throw new Error('Brak sesji')
+        const res = await fetch('/api/journal', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const body = (await res.json()) as {
+          conversations: Array<{
+            id: string
+            startedAt: string
+            endedAt: string
+            category: JournalEntry['category']
+            title: string
+            summary: string
+          }>
+        }
+        if (cancelled) return
+        const mapped: JournalEntry[] = body.conversations.map((c) => {
+          const start = new Date(c.startedAt)
+          const end = new Date(c.endedAt)
+          const fmt = (d: Date) =>
+            `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+          return {
+            id: c.id,
+            date: start.toISOString().slice(0, 10),
+            startTime: fmt(start),
+            endTime: fmt(end),
+            category: c.category,
+            title: c.title,
+            summary: c.summary,
+          }
+        })
+        setEntries(mapped)
+      } catch (e) {
+        if (!cancelled) setLoadError((e as Error).message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open])
 
   // Aktywny dzień — domyślnie najnowszy z wpisami.
   const newestWithEntries = useMemo(() => {
@@ -210,7 +262,13 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
                 transition={{ duration: reduce ? 0 : 0.18, ease: [0.32, 0.72, 0, 1] }}
                 className="space-y-3"
               >
-                {activeEntries.length === 0 ? (
+                {loading ? (
+                  <LoadingState />
+                ) : loadError ? (
+                  <ErrorState message={loadError} />
+                ) : entries.length === 0 ? (
+                  <FirstTimeState />
+                ) : activeEntries.length === 0 ? (
                   <EmptyState />
                 ) : (
                   activeEntries.map((e) => <EntryCard key={e.id} entry={e} />)
@@ -248,6 +306,35 @@ function EntryCard({ entry }: { entry: JournalEntry }) {
         {entry.summary}
       </p>
     </article>
+  )
+}
+
+function LoadingState() {
+  return (
+    <div className="mt-10 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+      Wczytuję dzienniczek…
+    </div>
+  )
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="mt-10 rounded-2xl border border-alert-soft bg-alert-soft p-4 text-[13px] text-alert">
+      Nie udało się wczytać dzienniczka: {message}
+    </div>
+  )
+}
+
+function FirstTimeState() {
+  return (
+    <div className="mt-10 flex flex-col items-center text-center">
+      <div className="font-serif text-[18px] text-ink-primary">
+        Dzienniczek jest jeszcze pusty
+      </div>
+      <p className="mt-2 max-w-[260px] text-[13px] leading-[1.5] text-ink-secondary">
+        Po pierwszej dłuższej rozmowie z Subskrypcikiem zapiszę tu krótkie podsumowanie — datę, kategorię i wniosek z dyskusji.
+      </p>
+    </div>
   )
 }
 
