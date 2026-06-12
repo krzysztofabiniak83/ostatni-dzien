@@ -1,9 +1,12 @@
 // Auto-generated from market.json — server-friendly TS module (no JSON import attrs).
+import type { CategoryId } from './_shared/categories.js'
+
 export interface MarketPlan { name: string; pricePLN: number; period: string; note?: string }
 export interface MarketEntry {
   id: string
   name: string
-  category: string
+  /** Zgodne z taksonomią Ostatni Dzień — patrz `api/_shared/categories.ts`. */
+  category: CategoryId
   plans: MarketPlan[]
   cancellation: { method: string; url: string; noticePeriodDays: number; notes: string }
   alternatives: string[]
@@ -12,7 +15,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "netflix",
     "name": "Netflix",
-    "category": "VOD",
+    "category": "media_vod",
     "plans": [
       {
         "name": "Standard z reklamami",
@@ -46,7 +49,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "disney_plus",
     "name": "Disney+",
-    "category": "VOD",
+    "category": "media_vod",
     "plans": [
       {
         "name": "Standard z reklamami",
@@ -84,7 +87,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "hbo_max",
     "name": "HBO Max",
-    "category": "VOD",
+    "category": "media_vod",
     "plans": [
       {
         "name": "Standard z reklamami",
@@ -122,7 +125,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "skyshowtime",
     "name": "SkyShowtime",
-    "category": "VOD",
+    "category": "media_vod",
     "plans": [
       {
         "name": "Standard",
@@ -150,7 +153,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "apple_tv_plus",
     "name": "Apple TV+",
-    "category": "VOD",
+    "category": "media_vod",
     "plans": [
       {
         "name": "Indywidualny",
@@ -172,7 +175,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "spotify",
     "name": "Spotify",
-    "category": "Muzyka",
+    "category": "audio_podcasts",
     "plans": [
       {
         "name": "Individual",
@@ -210,7 +213,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "apple_music",
     "name": "Apple Music",
-    "category": "Muzyka",
+    "category": "audio_podcasts",
     "plans": [
       {
         "name": "Indywidualny",
@@ -243,7 +246,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "tidal",
     "name": "Tidal",
-    "category": "Muzyka",
+    "category": "audio_podcasts",
     "plans": [
       {
         "name": "Individual",
@@ -270,7 +273,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "youtube_premium",
     "name": "YouTube Premium",
-    "category": "VOD + Muzyka",
+    "category": "media_vod",
     "plans": [
       {
         "name": "Indywidualny",
@@ -302,7 +305,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "adobe_cc",
     "name": "Adobe Creative Cloud",
-    "category": "Produktywność / Kreacja",
+    "category": "design_creative",
     "plans": [
       {
         "name": "Photography (Photoshop + Lightroom)",
@@ -340,7 +343,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "canva",
     "name": "Canva Pro",
-    "category": "Produktywność / Kreacja",
+    "category": "design_creative",
     "plans": [
       {
         "name": "Pro (1 osoba)",
@@ -372,7 +375,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "figma",
     "name": "Figma",
-    "category": "Produktywność / Kreacja",
+    "category": "design_creative",
     "plans": [
       {
         "name": "Starter",
@@ -404,7 +407,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "chatgpt_plus",
     "name": "ChatGPT Plus",
-    "category": "AI",
+    "category": "ai_tools",
     "plans": [
       {
         "name": "Plus",
@@ -433,7 +436,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "claude_pro",
     "name": "Claude Pro",
-    "category": "AI",
+    "category": "ai_tools",
     "plans": [
       {
         "name": "Pro",
@@ -462,7 +465,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "microsoft_365",
     "name": "Microsoft 365",
-    "category": "Produktywność",
+    "category": "productivity_cloud",
     "plans": [
       {
         "name": "Personal",
@@ -499,7 +502,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "icloud_plus",
     "name": "iCloud+",
-    "category": "Chmura",
+    "category": "productivity_cloud",
     "plans": [
       {
         "name": "50 GB",
@@ -531,7 +534,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "google_one",
     "name": "Google One",
-    "category": "Chmura",
+    "category": "productivity_cloud",
     "plans": [
       {
         "name": "100 GB",
@@ -563,7 +566,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "audible",
     "name": "Audible",
-    "category": "Audiobooki",
+    "category": "audio_podcasts",
     "plans": [
       {
         "name": "Premium Plus",
@@ -586,7 +589,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "storytel",
     "name": "Storytel",
-    "category": "Audiobooki",
+    "category": "audio_podcasts",
     "plans": [
       {
         "name": "Single",
@@ -614,7 +617,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "legimi",
     "name": "Legimi",
-    "category": "Audiobooki / Ebooki",
+    "category": "audio_podcasts",
     "plans": [
       {
         "name": "Bez limitów (8 godz./mies. + książki)",
@@ -642,7 +645,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "zdrofit",
     "name": "Zdrofit",
-    "category": "Fitness",
+    "category": "other",
     "plans": [
       {
         "name": "OPEN",
@@ -670,7 +673,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "multisport",
     "name": "Multisport",
-    "category": "Fitness",
+    "category": "other",
     "plans": [
       {
         "name": "Plus (przez pracodawcę)",
@@ -699,7 +702,7 @@ export const MARKET: MarketEntry[] = [
   {
     "id": "medicover_sport",
     "name": "Medicover Sport",
-    "category": "Fitness",
+    "category": "other",
     "plans": [
       {
         "name": "Aktywny",

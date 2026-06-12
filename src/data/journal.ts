@@ -1,15 +1,20 @@
 /**
- * Mock danych "Dzienniczka Rozmów" z Subskrypcikiem.
- * W realnym wdrożeniu — mapowanie z API historii sesji czatu na strukturę
- * { date, entries[] } z kategorią rozpoznaną po treści/kontekście.
+ * UI-meta dla taksonomii kategorii Ostatni Dzień.
+ *
+ * Single Source of Truth dla ID/label/typu = `api/_shared/categories.ts`.
+ * Ten plik dokłada warstwę prezentacyjną (pill colors, krótkie etykiety)
+ * i dane demo do dzienniczka. NIE redefinujemy enum-a tutaj — żeby
+ * backend i FE nigdy się nie rozjechały.
  */
 
-export type JournalCategory =
-  | 'media'
-  | 'ai'
-  | 'design'
-  | 'security'
-  | 'other'
+import {
+  CATEGORY_IDS,
+  CATEGORY_LABELS,
+  type CategoryId,
+} from '../../api/_shared/categories'
+
+export type JournalCategory = CategoryId
+export { CATEGORY_IDS, CATEGORY_LABELS }
 
 export interface JournalCategoryMeta {
   id: JournalCategory
@@ -18,30 +23,41 @@ export interface JournalCategoryMeta {
   pillClass: string
 }
 
+/** Paleta pillów — 7 stłumionych kolorów, jeden per kategoria. */
 export const CATEGORY_META: Record<JournalCategory, JournalCategoryMeta> = {
-  media: {
-    id: 'media',
-    label: 'Media i TV',
+  media_vod: {
+    id: 'media_vod',
+    label: CATEGORY_LABELS.media_vod,
     pillClass: 'bg-[#F5E4DC] text-[#8E4226]',
   },
-  ai: {
-    id: 'ai',
-    label: 'Narzędzia AI',
-    pillClass: 'bg-accent-soft text-accent',
+  audio_podcasts: {
+    id: 'audio_podcasts',
+    label: CATEGORY_LABELS.audio_podcasts,
+    pillClass: 'bg-[#E8DFEC] text-[#5C3F66]',
   },
-  design: {
-    id: 'design',
-    label: 'Narzędzia Designera',
+  design_creative: {
+    id: 'design_creative',
+    label: CATEGORY_LABELS.design_creative,
     pillClass: 'bg-[#EFE6D7] text-[#7A5A1F]',
   },
-  security: {
-    id: 'security',
-    label: 'Bezpieczeństwo',
+  ai_tools: {
+    id: 'ai_tools',
+    label: CATEGORY_LABELS.ai_tools,
+    pillClass: 'bg-accent-soft text-accent',
+  },
+  productivity_cloud: {
+    id: 'productivity_cloud',
+    label: CATEGORY_LABELS.productivity_cloud,
     pillClass: 'bg-[#E3E8EC] text-[#34495A]',
+  },
+  shopping_gaming: {
+    id: 'shopping_gaming',
+    label: CATEGORY_LABELS.shopping_gaming,
+    pillClass: 'bg-[#F1DDD8] text-[#7A3826]',
   },
   other: {
     id: 'other',
-    label: 'Pozostałe',
+    label: CATEGORY_LABELS.other,
     pillClass: 'bg-bg-subtle text-ink-secondary',
   },
 }
@@ -70,7 +86,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-06-11',
     startTime: '20:30',
     endTime: '21:15',
-    category: 'media',
+    category: 'media_vod',
     title: 'Netflix — podwyżka i co dalej',
     summary:
       'Rozmowa o nowym cenniku Netflixa (67 zł/mc) i czy zostać. Subskrypcik zaproponował pauzę na miesiąc i porównanie z HBO Max — odłożyłem decyzję na koniec czerwca.',
@@ -80,7 +96,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-06-11',
     startTime: '18:02',
     endTime: '18:14',
-    category: 'ai',
+    category: 'ai_tools',
     title: 'ChatGPT Plus vs Claude Pro',
     summary:
       'Porównanie planów AI pod kątem mojego użycia (pisanie + kod). Rekomendacja: przetestować Claude równolegle przez miesiąc zanim zrezygnuję z ChatGPT.',
@@ -90,7 +106,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-06-09',
     startTime: '11:40',
     endTime: '12:05',
-    category: 'design',
+    category: 'design_creative',
     title: 'Figma — przejście na plan roczny',
     summary:
       'Sprawdziliśmy, czy plan roczny Figmy się opłaca. Przy obecnym tempie pracy zwrot po 8 miesiącach. Przypomnienie na koniec bieżącego cyklu miesięcznego.',
@@ -100,7 +116,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-06-05',
     startTime: '22:10',
     endTime: '22:28',
-    category: 'security',
+    category: 'productivity_cloud',
     title: '1Password — rodzina czy solo',
     summary:
       'Analiza planu rodzinnego dla 3 osób. Wniosek: tak, oszczędność 12 zł/mc względem trzech kont solo. Zmiana zaplanowana na nowy okres rozliczeniowy.',
@@ -112,7 +128,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-05-28',
     startTime: '21:00',
     endTime: '21:18',
-    category: 'media',
+    category: 'media_vod',
     title: 'Disney+ — trial kończy się 1.06',
     summary:
       'Przypomnienie, że trial Disney+ kończy się za 4 dni. Zdecydowałem o anulowaniu — Subskrypcik podał deep link do ustawień konta.',
@@ -122,7 +138,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-05-28',
     startTime: '14:20',
     endTime: '14:45',
-    category: 'design',
+    category: 'design_creative',
     title: 'Adobe CC — szukanie alternatyw',
     summary:
       'Przegląd alternatyw (Affinity, DaVinci). Decyzja: zostaję na CC ze względu na flow z klientami, ale zmieniam plan na pojedynczą aplikację — Photoshop.',
@@ -132,7 +148,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-05-22',
     startTime: '19:45',
     endTime: '20:01',
-    category: 'ai',
+    category: 'ai_tools',
     title: 'Midjourney — czy nadal używam',
     summary:
       'Subskrypcik zauważył, że nie generowałem nic od 6 tygodni. Podjąłem decyzję o anulowaniu — 30 USD/mc oszczędności.',
@@ -142,7 +158,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-05-15',
     startTime: '08:30',
     endTime: '08:48',
-    category: 'security',
+    category: 'productivity_cloud',
     title: 'NordVPN — odnowienie 2-letnie',
     summary:
       'Subskrypcik ostrzegł przed automatycznym odnowieniem na 2 lata po cenie wyjściowej. Decyzja: przejście na plan roczny po obecnym okresie.',
@@ -152,7 +168,7 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     date: '2026-05-07',
     startTime: '13:10',
     endTime: '13:22',
-    category: 'other',
+    category: 'audio_podcasts',
     title: 'Spotify — Family czy Premium',
     summary:
       'Krótka rozmowa o tym, czy ma sens dołożyć żonę do planu. Tak — różnica 9 zł/mc przy 2 osobach.',
@@ -161,27 +177,35 @@ export const MOCK_JOURNAL: JournalEntry[] = [
 
 /** Krótkie etykiety pillów na karcie subskrypcji (na liście dashboardu). */
 export const CATEGORY_SHORT_LABEL: Record<JournalCategory, string> = {
-  media: 'Media',
-  ai: 'AI',
-  design: 'Design',
-  security: 'Security',
+  media_vod: 'VOD',
+  audio_podcasts: 'Audio',
+  design_creative: 'Design',
+  ai_tools: 'AI',
+  productivity_cloud: 'Praca',
+  shopping_gaming: 'Gaming',
   other: 'Inne',
 }
 
 /**
- * Mapuje nazwę subskrypcji na kategorię dzienniczka.
- * Heurystyka — łapie najpopularniejsze brandy. Reszta wpada w `other`.
+ * Heurystyka brand → kategoria. Używana jako fallback w UI gdy kolumna
+ * `category` w bazie jest pusta (legacy wiersze sprzed migracji albo nazwa
+ * spoza listy). Realnym źródłem prawdy jest kolumna w DB ustawiana przez
+ * agenta (add_subscription) albo backfill.
  */
 export function categorizeSubscription(name: string): JournalCategory {
   const n = name.toLowerCase()
-  if (/(netflix|hbo|disney|spotify|apple\s*tv|apple\s*music|youtube|player|canal|prime|max|tidal|deezer)/.test(n))
-    return 'media'
-  if (/(chatgpt|openai|claude|anthropic|midjourney|gemini|perplexity|copilot|runway|cursor|notion\s*ai)/.test(n))
-    return 'ai'
-  if (/(figma|adobe|canva|framer|sketch|invision|affinity|webflow|notion(?!\s*ai))/.test(n))
-    return 'design'
-  if (/(1password|nordvpn|expressvpn|surfshark|protonvpn|bitwarden|dashlane|lastpass|vpn)/.test(n))
-    return 'security'
+  if (/(netflix|hbo|disney|player|canal|prime\s*video|youtube|apple\s*tv|max(\s|$))/.test(n))
+    return 'media_vod'
+  if (/(spotify|tidal|deezer|apple\s*music|audible|storytel|empik\s*go)/.test(n))
+    return 'audio_podcasts'
+  if (/(chatgpt|openai|claude|anthropic|midjourney|gemini|perplexity|copilot|cursor|notion\s*ai|runway)/.test(n))
+    return 'ai_tools'
+  if (/(figma|adobe|photoshop|lightroom|premiere|illustrator|canva|framer|sketch|affinity)/.test(n))
+    return 'design_creative'
+  if (/(notion(?!\s*ai)|linear|slack|google\s*workspace|microsoft\s*365|icloud|dropbox|onedrive|1password|nordvpn|expressvpn|surfshark|protonvpn|bitwarden|vpn|linkedin)/.test(n))
+    return 'productivity_cloud'
+  if (/(amazon\s*prime|allegro|xbox|playstation|ps\s*plus|game\s*pass|nintendo|steam)/.test(n))
+    return 'shopping_gaming'
   return 'other'
 }
 

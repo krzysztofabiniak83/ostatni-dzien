@@ -34,7 +34,9 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
   const isCritical = sub.urgency === 'critical' || isToday
   // Część czasowa daty, np. "Dziś · 23:59" → "23:59".
   const timePart = sub.date.split('· ')[1]?.trim()
-  const category = categorizeSubscription(sub.name)
+  // Preferujemy kategorię z bazy (kanon agentowy). Fallback: heurystyka nazwy
+  // — pokrywa legacy wiersze i mocki sprzed migracji taksonomii.
+  const category = sub.category ?? categorizeSubscription(sub.name)
   const categoryMeta = CATEGORY_META[category]
 
   return (

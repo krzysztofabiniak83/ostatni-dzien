@@ -1,6 +1,7 @@
 import type { Subscription } from '../types/subscription'
 import type { Notification } from '../store/notifications'
 import type { Currency, ReminderDays } from '../store/settings'
+import { isCategoryId, type CategoryId } from '../../api/_shared/categories'
 
 // ===== subscriptions =====
 
@@ -20,6 +21,7 @@ interface DbSubscription {
   section: 'today' | 'week' | 'month' | 'later'
   chart_heights: number[]
   chart_total_pln: number
+  category?: CategoryId | null
 }
 
 export function subFromRow(r: DbSubscription): Subscription {
@@ -38,6 +40,7 @@ export function subFromRow(r: DbSubscription): Subscription {
     section: r.section,
     chartHeights: r.chart_heights ?? [],
     chartTotalPLN: r.chart_total_pln,
+    category: isCategoryId(r.category) ? r.category : undefined,
   }
 }
 
@@ -58,6 +61,7 @@ export function subToRow(s: Subscription, userId: string): DbSubscription {
     section: s.section,
     chart_heights: s.chartHeights,
     chart_total_pln: s.chartTotalPLN,
+    category: s.category ?? 'other',
   }
 }
 

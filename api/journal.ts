@@ -1,6 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import OpenAI from 'openai'
 import { getUserFromRequest } from './_shared/auth.js'
+import {
+  CATEGORY_GUIDE_FOR_LLM,
+  DEFAULT_CATEGORY,
+  isCategoryId,
+  type CategoryId,
+} from './_shared/categories.js'
 
 /**
  * Dzienniczek Rozmów — persystencja + odczyt.
@@ -33,19 +39,14 @@ const SUMMARY_PROMPT = `Jesteś analitykiem rozmów. Dostajesz zapis konwersacji
 
 Zwróć WYŁĄCZNIE czysty JSON (bez markdown, bez code-fence) o strukturze:
 {
-  "category": "media" | "ai" | "design" | "security" | "other",
+  "category": <jedna z dozwolonych poniżej>,
   "title": "krótki tytuł (max 60 znaków, po polsku, bez kropki na końcu)",
   "summary": "2-3 zdania (max 300 znaków, po polsku) — o czym była rozmowa, jaki wniosek/decyzja zapadła"
 }
 
-Kategorie:
-- media: Netflix, HBO, Disney+, Spotify, Apple TV/Music, YouTube Premium, Player, Canal+, Tidal itp.
-- ai: ChatGPT, Claude, Midjourney, Gemini, Perplexity, Copilot, Runway, narzędzia AI
-- design: Figma, Adobe (Photoshop/Lightroom/CC), Canva, Framer, Sketch, narzędzia projektowe
-- security: 1Password, NordVPN, ExpressVPN, Bitwarden, ProtonVPN, menedżery haseł, VPN
-- other: wszystko inne (fitness, banki, zakupy, ogólne pytania).
+${CATEGORY_GUIDE_FOR_LLM}
 
-Jeśli rozmowa porusza wiele kategorii — wybierz dominującą. Tytuł ma być konkretny ("Netflix — czy podwyżka się opłaca", NIE "Rozmowa o subskrypcji").`
+Tytuł ma być konkretny ("Netflix — czy podwyżka się opłaca", NIE "Rozmowa o subskrypcji").`
 
 async function handleGet(req: VercelRequest, res: VercelResponse) {
   const ctx = await getUserFromRequest(req, res)
@@ -126,7 +127,7 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
     .join('\n')
     .slice(0, 12_000)
 
-  let category: 'media' | 'ai' | 'design' | 'security' | 'other' = 'other'
+  let category: CategoryId = DEFAULT_CATEGORY
   let title = 'Rozmowa z Subskrypcikiem'
   let summary = 'Krótka konsultacja w sprawie subskrypcji.'
 
@@ -141,12 +142,10 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
       response_format: { type: 'json_object' },
     })
     const raw = completion.choices[0]?.message?.content ?? '{}'
-    const parsed = JSON.parse(raw) as { category?: string; title?: string; summary?: string }
-    if (parsed.category && ['media', 'ai', 'design', 'security', 'other'].includes(parsed.category)) {
-      category = parsed.category as typeof category
-    }
-    if (parsed.title) title = String(parsed.title).slice(0, 60)
-    if (parsed.summary) summary = String(parsed.summary).slice(0, 300)
+    const parsed = JSON.parse(raw) as { category?: unknown; title?: unknown; summary?: unknown }
+    if (isCategoryId(parsed.category)) category = parsed.category
+    if (typeof parsed.title === 'string') title = parsed.title.slice(0, 60)
+    if (typeof parsed.summary === 'string') summary = parsed.summary.slice(0, 300)
   } catch {
     // Best-effort — wciąż zapisujemy z domyślnymi wartościami.
   }

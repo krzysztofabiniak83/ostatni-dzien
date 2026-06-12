@@ -2,6 +2,7 @@ import { createMcpHandler, withMcpAuth } from 'mcp-handler'
 import { z } from 'zod'
 import { authenticateToken, type AuthedContext } from './_shared/auth.js'
 import { formatSubDate, sectionFor, urgencyFor } from './_shared/format.js'
+import { CATEGORY_IDS } from './_shared/categories.js'
 
 /**
  * MCP server (Streamable HTTP) — `/api/mcp`.
@@ -46,7 +47,7 @@ const baseHandler = createMcpHandler(
         return withAuthCtx(extra.authInfo?.token, async ({ supabase, userId }) => {
           const { data, error } = await supabase
             .from('subscriptions')
-            .select('id,name,amount_pln,date,days_until,type,status')
+            .select('id,name,amount_pln,date,days_until,type,status,category')
             .eq('user_id', userId)
             .in('status', ['active', 'paused'])
             .order('days_until', { ascending: true })
@@ -60,6 +61,7 @@ const baseHandler = createMcpHandler(
               daysUntil: s.days_until,
               type: s.type,
               status: s.status,
+              category: s.category,
             })),
           })
         })
@@ -68,14 +70,17 @@ const baseHandler = createMcpHandler(
 
     server.tool(
       'add_subscription',
-      'Dodaje nową subskrypcję dla zalogowanego użytkownika. Domyślnie typ "renewal", miesięczna, daysUntil=0.',
+      'Dodaje nową subskrypcję dla zalogowanego użytkownika. Domyślnie typ "renewal", miesięczna, daysUntil=0. WYMAGANE pole `category` — wybierz dokładnie jedną z 7 wartości taksonomii Ostatni Dzień: media_vod (Netflix/HBO/Disney+), audio_podcasts (Spotify/Apple Music/Audible), design_creative (Figma/Adobe/Canva), ai_tools (ChatGPT/Claude/Midjourney), productivity_cloud (Notion/Slack/iCloud/1Password/VPN), shopping_gaming (Prime/Xbox/PlayStation), other (fitness/edukacja/inne).',
       {
         name: z.string().min(1).describe('Nazwa usługi, np. "Netflix Podstawowy".'),
         amountPLN: z.number().positive().describe('Kwota miesięczna w PLN (może mieć ułamek).'),
+        category: z
+          .enum(CATEGORY_IDS)
+          .describe('Kategoria taksonomii Ostatni Dzień (jedna z 7). Wymagana.'),
         daysUntil: z.number().int().min(0).optional().describe('Dni do najbliższego pobrania. Domyślnie 0.'),
         type: z.enum(['trial', 'renewal']).optional().describe('Domyślnie "renewal".'),
       },
-      async ({ name, amountPLN, daysUntil, type }, extra) => {
+      async ({ name, amountPLN, category, daysUntil, type }, extra) => {
         return withAuthCtx(extra.authInfo?.token, async ({ supabase, userId }) => {
           const trimmedName = name.trim()
           if (!trimmedName) return fail('invalid_body: name nie może być pusty')
@@ -104,12 +109,13 @@ const baseHandler = createMcpHandler(
             chart_heights: [0, 0, 0, 0, 0, 4],
             chart_total_pln: 0,
             status: 'active',
+            category,
           })
           if (insErr) return fail(`insert_failed: ${insErr.message}`)
 
           const { data: verify } = await supabase
             .from('subscriptions')
-            .select('id,name,amount_pln,date,days_until,type,status')
+            .select('id,name,amount_pln,date,days_until,type,status,category')
             .eq('id', id)
             .eq('user_id', userId)
             .maybeSingle()
@@ -124,6 +130,7 @@ const baseHandler = createMcpHandler(
               daysUntil: verify.days_until,
               type: verify.type,
               status: verify.status,
+              category: verify.category,
             },
           })
         })
@@ -177,9 +184,11 @@ const baseHandler = createMcpHandler(
           .describe('ISO 8601 (np. "2026-05-01T00:00:00Z"). Default: 60 dni temu.'),
         to: z.string().optional().describe('ISO 8601. Default: teraz.'),
         category: z
-          .enum(['media', 'ai', 'design', 'security', 'other'])
+          .enum(CATEGORY_IDS)
           .optional()
-          .describe('Filtr po kategorii.'),
+          .describe(
+            'Filtr po kategorii. Dozwolone: media_vod, audio_podcasts, design_creative, ai_tools, productivity_cloud, shopping_gaming, other.',
+          ),
         limit: z.number().int().min(1).max(100).optional().describe('Max liczba wpisów (default 50).'),
       },
       async ({ from, to, category, limit }, extra) => {

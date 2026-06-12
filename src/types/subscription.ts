@@ -1,3 +1,5 @@
+import type { CategoryId } from '../../api/_shared/categories'
+
 export type SubscriptionType = 'trial' | 'renewal'
 
 /** Pilność karty — steruje wariantem wizualnym SubCard. */
@@ -26,6 +28,12 @@ export interface Subscription {
   type: SubscriptionType
   urgency: Urgency
   section: Section
+  /**
+   * Kategoria taksonomii Ostatni Dzień. W bazie always-set (default 'other').
+   * FE-side opcjonalne tylko ze względu na legacy mock danych — patrz
+   * `categorizeSubscription()` jako fallback.
+   */
+  category?: CategoryId
   /** 6 słupków mini-wykresu (wysokości 0-60) — wykorzystane w Fazie 2. */
   chartHeights: number[]
   /** Suma z ostatnich 6 miesięcy w GROSZACH (PLN). Np. 40200 = 402,00 zł. */

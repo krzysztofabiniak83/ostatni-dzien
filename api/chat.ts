@@ -5,6 +5,7 @@ import { getUserFromRequest } from './_shared/auth.js'
 import { checkAndIncrementDailyUsage } from './_shared/rate-limit.js'
 import { formatSubDate, sectionFor, urgencyFor } from './_shared/format.js'
 import { SYSTEM_PROMPT } from './_shared/prompt.js'
+import { CATEGORY_IDS, isCategoryId } from './_shared/categories.js'
 
 /**
  * Subskrypcik — agent czatu.
@@ -45,16 +46,22 @@ const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: 'add_subscription',
       description:
-        'Dodaje nową subskrypcję do bazy zalogowanego użytkownika. Używaj gdy user prosi o "dodaj/zapisz/wpisz". Kwota od usera jest święta — NIE zastępuj jej cennikiem z pamięci. Domyślnie type=renewal, cykl miesięczny, daysUntil=0 (dziś), waluta PLN. Tool sam tworzy id, formatuje datę, oblicza section/urgency i weryfikuje zapis SELECT-em.',
+        'Dodaje nową subskrypcję do bazy zalogowanego użytkownika. Używaj gdy user prosi o "dodaj/zapisz/wpisz". Kwota od usera jest święta — NIE zastępuj jej cennikiem z pamięci. Domyślnie type=renewal, cykl miesięczny, daysUntil=0 (dziś), waluta PLN. WYMAGANE pole category — wybierz dokładnie jedną z 7 wartości taksonomii Ostatni Dzień. Tool sam tworzy id, formatuje datę, oblicza section/urgency i weryfikuje zapis SELECT-em.',
       parameters: {
         type: 'object',
         properties: {
           name: { type: 'string', description: 'Nazwa usługi (np. "Netflix Podstawowy").' },
           amountPLN: { type: 'number', description: 'Kwota w PLN, np. 29 lub 29.99. Jeżeli user podał EUR/USD — przelicz (1 EUR ≈ 4.28 PLN, 1 USD ≈ 3.97 PLN) i wspomnij o przeliczeniu w odpowiedzi.' },
+          category: {
+            type: 'string',
+            enum: [...CATEGORY_IDS],
+            description:
+              'WYMAGANE. Kategoria taksonomii Ostatni Dzień — wybierz dokładnie jedną: media_vod (Netflix/HBO/Disney+/Player/Canal+/YouTube Premium), audio_podcasts (Spotify/Apple Music/Tidal/Audible/Storytel), design_creative (Figma/Adobe CC/Canva/Framer/Affinity), ai_tools (ChatGPT/Claude/Midjourney/Gemini/Copilot/Cursor), productivity_cloud (Notion/Slack/Google Workspace/iCloud/Dropbox/1Password/NordVPN/menedżery haseł/VPN), shopping_gaming (Amazon Prime/Allegro Smart/Xbox Game Pass/PS Plus/Nintendo Online), other (fitness/edukacja/zdrowie/inne).',
+          },
           daysUntil: { type: 'integer', description: 'Liczba dni od dziś do następnego pobrania. 0 = dziś (default).', default: 0 },
           type: { type: 'string', enum: ['trial', 'renewal'], description: 'trial tylko przy wyraźnym sygnale ("okres próbny", "darmowy miesiąc"). Default: renewal.', default: 'renewal' },
         },
-        required: ['name', 'amountPLN'],
+        required: ['name', 'amountPLN', 'category'],
       },
     },
   },
@@ -253,12 +260,17 @@ ${listSnapshot || '(pusta)'}`
             const args = JSON.parse(tc.args || '{}') as {
               name?: string
               amountPLN?: number
+              category?: string
               daysUntil?: number
               type?: 'trial' | 'renewal'
             }
             const name = (args.name || '').trim()
             if (!name || typeof args.amountPLN !== 'number') {
               result = { error: 'Brakuje nazwy lub kwoty.' }
+            } else if (!isCategoryId(args.category)) {
+              result = {
+                error: `Brakuje kategorii lub niedozwolona wartość. Wymagane: jeden z ${CATEGORY_IDS.join(', ')}.`,
+              }
             } else {
               const daysUntil = Math.max(0, Math.floor(args.daysUntil ?? 0))
               const subType = args.type === 'trial' ? 'trial' : 'renewal'
@@ -283,13 +295,14 @@ ${listSnapshot || '(pusta)'}`
                 chart_heights: [0, 0, 0, 0, 0, 4],
                 chart_total_pln: 0,
                 status: 'active',
+                category: args.category,
               })
               if (insErr) {
                 result = { error: `INSERT nieudany: ${insErr.message}` }
               } else {
                 const { data: verify } = await supabase
                   .from('subscriptions')
-                  .select('id,name,amount_pln,date,days_until,type,status')
+                  .select('id,name,amount_pln,date,days_until,type,status,category')
                   .eq('id', id)
                   .eq('user_id', userId)
                   .maybeSingle()
