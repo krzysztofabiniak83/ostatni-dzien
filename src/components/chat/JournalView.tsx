@@ -21,11 +21,11 @@ const PL_MONTHS = [
 ]
 const PL_WEEKDAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb']
 
-/** Generuje listę 30 dni wstecz + dziś (najstarsze pierwsze). */
+/** Generuje listę 60 dni wstecz + dziś (najstarsze pierwsze). */
 function buildDayWindow(): string[] {
   const out: string[] = []
   const today = new Date()
-  for (let i = 30; i >= 0; i--) {
+  for (let i = 60; i >= 0; i--) {
     const d = new Date(today)
     d.setDate(today.getDate() - i)
     out.push(d.toISOString().slice(0, 10))
@@ -120,6 +120,13 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
   const scrollerRef = useRef<HTMLDivElement>(null)
   const dayRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const snapTimerRef = useRef<number | null>(null)
+  // Drag-to-scroll dla myszy (mobile ma natywny touch-scroll).
+  const dragRef = useRef<{ down: boolean; startX: number; startScroll: number; moved: boolean }>({
+    down: false,
+    startX: 0,
+    startScroll: 0,
+    moved: false,
+  })
 
   // Po otwarciu — scroll aktywnego dnia do środka (bez animacji przy pierwszym renderze).
   useEffect(() => {
@@ -216,8 +223,44 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
             <div
               ref={scrollerRef}
               onScroll={handleScroll}
-              className="flex gap-2 overflow-x-auto px-5 pt-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-              style={{ scrollSnapType: 'x mandatory' }}
+              onMouseDown={(e) => {
+                const el = scrollerRef.current
+                if (!el) return
+                dragRef.current = {
+                  down: true,
+                  startX: e.clientX,
+                  startScroll: el.scrollLeft,
+                  moved: false,
+                }
+                el.style.cursor = 'grabbing'
+              }}
+              onMouseMove={(e) => {
+                if (!dragRef.current.down) return
+                const el = scrollerRef.current
+                if (!el) return
+                const dx = e.clientX - dragRef.current.startX
+                if (Math.abs(dx) > 4) dragRef.current.moved = true
+                el.scrollLeft = dragRef.current.startScroll - dx
+              }}
+              onMouseUp={() => {
+                dragRef.current.down = false
+                if (scrollerRef.current) scrollerRef.current.style.cursor = 'grab'
+              }}
+              onMouseLeave={() => {
+                if (!dragRef.current.down) return
+                dragRef.current.down = false
+                if (scrollerRef.current) scrollerRef.current.style.cursor = 'grab'
+              }}
+              onClickCapture={(e) => {
+                // Zjedz click jeśli to było przeciąganie a nie tap.
+                if (dragRef.current.moved) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  dragRef.current.moved = false
+                }
+              }}
+              className="flex gap-2 overflow-x-auto px-5 pt-1 pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden cursor-grab select-none"
+              style={{ scrollSnapType: 'x mandatory', touchAction: 'pan-x' }}
             >
               {days.map((date) => {
                 const d = new Date(date + 'T00:00:00')

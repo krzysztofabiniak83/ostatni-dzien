@@ -58,67 +58,78 @@ export interface JournalEntry {
   summary: string
 }
 
-/** Pomocnik — odejmuje N dni od dziś i zwraca ISO date. */
-function daysAgo(n: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
-}
-
+/**
+ * Demo wpisów na produkcji — daty na sztywno (czerwiec + maj 2026).
+ * 4 wpisy w czerwcu (w tym dzień z dwoma rozmowami) + 5 wpisów w maju (w tym
+ * dzień z dwoma rozmowami). Realne konwersacje usera nadpisują te wpisy.
+ */
 export const MOCK_JOURNAL: JournalEntry[] = [
+  // ── CZERWIEC 2026 ──────────────────────────────────────────────
   {
-    id: 'j-1',
-    date: daysAgo(0),
+    id: 'j-jun-11a',
+    date: '2026-06-11',
     startTime: '20:30',
     endTime: '21:15',
     category: 'media',
-    title: 'Co z Netflixem w czerwcu',
+    title: 'Netflix — podwyżka i co dalej',
     summary:
-      'Rozmowa o tym, czy warto utrzymać Netflix przy podwyżce. Subskrypcik zaproponował pauzę na miesiąc i porównanie z HBO Max — sprawdziliśmy, że bieżący koszt to 67 zł/mc, ostatnie odtworzenie 9 dni temu.',
+      'Rozmowa o nowym cenniku Netflixa (67 zł/mc) i czy zostać. Subskrypcik zaproponował pauzę na miesiąc i porównanie z HBO Max — odłożyłem decyzję na koniec czerwca.',
   },
   {
-    id: 'j-2',
-    date: daysAgo(0),
+    id: 'j-jun-11b',
+    date: '2026-06-11',
     startTime: '18:02',
     endTime: '18:14',
     category: 'ai',
     title: 'ChatGPT Plus vs Claude Pro',
     summary:
-      'Porównanie planów AI pod kątem mojego użycia (głównie pisanie i kod). Rekomendacja: zostać przy jednym narzędziu i przetestować Claude przez miesiąc równolegle, zanim zrezygnuję z ChatGPT.',
+      'Porównanie planów AI pod kątem mojego użycia (pisanie + kod). Rekomendacja: przetestować Claude równolegle przez miesiąc zanim zrezygnuję z ChatGPT.',
   },
   {
-    id: 'j-3',
-    date: daysAgo(1),
+    id: 'j-jun-09',
+    date: '2026-06-09',
     startTime: '11:40',
     endTime: '12:05',
     category: 'design',
-    title: 'Figma — przejście na rocznik',
+    title: 'Figma — przejście na plan roczny',
     summary:
-      'Sprawdziliśmy, czy plan roczny Figmy się opłaca. Przy obecnym tempie pracy zwrot po 8 miesiącach. Zaplanowane przypomnienie na koniec bieżącego cyklu miesięcznego.',
+      'Sprawdziliśmy, czy plan roczny Figmy się opłaca. Przy obecnym tempie pracy zwrot po 8 miesiącach. Przypomnienie na koniec bieżącego cyklu miesięcznego.',
   },
   {
-    id: 'j-4',
-    date: daysAgo(3),
+    id: 'j-jun-05',
+    date: '2026-06-05',
     startTime: '22:10',
     endTime: '22:28',
     category: 'security',
     title: '1Password — rodzina czy solo',
     summary:
-      'Analiza, czy przejście na plan rodzinny ma sens dla 3 osób. Wniosek: tak, oszczędność 12 zł/mc względem trzech kont solo. Zaplanowane na nowy okres rozliczeniowy.',
+      'Analiza planu rodzinnego dla 3 osób. Wniosek: tak, oszczędność 12 zł/mc względem trzech kont solo. Zmiana zaplanowana na nowy okres rozliczeniowy.',
   },
+
+  // ── MAJ 2026 ───────────────────────────────────────────────────
   {
-    id: 'j-5',
-    date: daysAgo(3),
-    startTime: '09:15',
-    endTime: '09:22',
+    id: 'j-may-28a',
+    date: '2026-05-28',
+    startTime: '21:00',
+    endTime: '21:18',
     category: 'media',
-    title: 'Disney+ — trial kończy się 18',
+    title: 'Disney+ — trial kończy się 1.06',
     summary:
       'Przypomnienie, że trial Disney+ kończy się za 4 dni. Zdecydowałem o anulowaniu — Subskrypcik podał deep link do ustawień konta.',
   },
   {
-    id: 'j-6',
-    date: daysAgo(5),
+    id: 'j-may-28b',
+    date: '2026-05-28',
+    startTime: '14:20',
+    endTime: '14:45',
+    category: 'design',
+    title: 'Adobe CC — szukanie alternatyw',
+    summary:
+      'Przegląd alternatyw (Affinity, DaVinci). Decyzja: zostaję na CC ze względu na flow z klientami, ale zmieniam plan na pojedynczą aplikację — Photoshop.',
+  },
+  {
+    id: 'j-may-22',
+    date: '2026-05-22',
     startTime: '19:45',
     endTime: '20:01',
     category: 'ai',
@@ -127,34 +138,24 @@ export const MOCK_JOURNAL: JournalEntry[] = [
       'Subskrypcik zauważył, że nie generowałem nic od 6 tygodni. Podjąłem decyzję o anulowaniu — 30 USD/mc oszczędności.',
   },
   {
-    id: 'j-7',
-    date: daysAgo(8),
-    startTime: '14:20',
-    endTime: '14:45',
-    category: 'design',
-    title: 'Adobe CC — alternatywy',
-    summary:
-      'Przegląd alternatyw do Adobe Creative Cloud (Affinity, DaVinci). Decyzja: zostaję na CC ze względu na flow z klientami, ale zmieniam plan na pojedynczą aplikację — Photoshop.',
-  },
-  {
-    id: 'j-8',
-    date: daysAgo(12),
-    startTime: '21:00',
-    endTime: '21:10',
-    category: 'other',
-    title: 'Spotify — Family czy Premium',
-    summary:
-      'Krótka rozmowa o tym, czy ma sens dołożyć żonę do planu. Tak — różnica 9 zł/mc przy 2 osobach.',
-  },
-  {
-    id: 'j-9',
-    date: daysAgo(15),
+    id: 'j-may-15',
+    date: '2026-05-15',
     startTime: '08:30',
     endTime: '08:48',
     category: 'security',
     title: 'NordVPN — odnowienie 2-letnie',
     summary:
-      'Subskrypcik ostrzegł przed automatycznym odnowieniem na 2 lata po cenie wyjściowej. Podjąłem decyzję o przejściu na plan roczny po obecnym okresie.',
+      'Subskrypcik ostrzegł przed automatycznym odnowieniem na 2 lata po cenie wyjściowej. Decyzja: przejście na plan roczny po obecnym okresie.',
+  },
+  {
+    id: 'j-may-07',
+    date: '2026-05-07',
+    startTime: '13:10',
+    endTime: '13:22',
+    category: 'other',
+    title: 'Spotify — Family czy Premium',
+    summary:
+      'Krótka rozmowa o tym, czy ma sens dołożyć żonę do planu. Tak — różnica 9 zł/mc przy 2 osobach.',
   },
 ]
 
