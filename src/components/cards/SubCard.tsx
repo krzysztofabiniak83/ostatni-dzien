@@ -3,11 +3,7 @@ import { Tag } from '../ui/Tag'
 import { SubLogo } from './SubLogo'
 import type { Subscription } from '../../types/subscription'
 import { useFormatAmount } from '../../utils/currency'
-import {
-  CATEGORY_META,
-  CATEGORY_SHORT_LABEL,
-  categorizeSubscription,
-} from '../../data/journal'
+import { CATEGORY_META, categorizeSubscription } from '../../data/journal'
 
 interface SubCardProps {
   sub: Subscription
@@ -112,16 +108,16 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
         </div>
       </div>
 
-      {/* Kategoria — pill w prawym górnym rogu */}
+      {/* Kategoria — pill w prawym górnym rogu (te same nazwy co w dzienniczku). */}
       <span
         className={clsx(
-          'absolute right-3 top-3 rounded-pill px-2 py-[3px]',
-          'font-mono text-[8.5px] uppercase tracking-[0.12em]',
+          'absolute right-3 top-3 max-w-[55%] truncate rounded-pill px-2 py-[3px]',
+          'font-mono text-[8.5px] uppercase tracking-[0.1em]',
           categoryMeta.pillClass,
         )}
-        aria-label={`Kategoria: ${categoryMeta.label}`}
+        title={categoryMeta.label}
       >
-        {CATEGORY_SHORT_LABEL[category]}
+        {categoryMeta.label}
       </span>
 
       {/* Logo — wyrównane do prawej-dolnej krawędzi karty */}

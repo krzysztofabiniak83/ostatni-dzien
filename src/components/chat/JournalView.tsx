@@ -128,33 +128,47 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
     moved: false,
   })
 
-  // Po otwarciu — scroll aktywnego dnia do środka (bez animacji przy pierwszym renderze).
+  /**
+   * Wyśrodkowuje wskazany dzień w karuzeli przez bezpośrednią manipulację
+   * `scrollLeft` (nie używamy `scrollIntoView` — ono potrafi przewinąć też
+   * zewnętrzne kontenery, co prowadzi do tego że cały chat sheet wyjeżdża
+   * poza viewport).
+   */
+  function centerDay(date: string, smooth: boolean) {
+    const scroller = scrollerRef.current
+    const node = dayRefs.current[date]
+    if (!scroller || !node) return
+    const target =
+      node.offsetLeft - scroller.clientWidth / 2 + node.clientWidth / 2
+    scroller.scrollTo({ left: target, behavior: smooth ? 'smooth' : 'auto' })
+  }
+
+  // Po otwarciu — scroll aktywnego dnia do środka (bez animacji).
   useEffect(() => {
     if (!open) return
-    const node = dayRefs.current[active]
-    if (node) node.scrollIntoView({ inline: 'center', block: 'nearest' })
+    // requestAnimationFrame, żeby layout się ustabilizował przed pomiarem.
+    const id = window.requestAnimationFrame(() => centerDay(active, false))
+    return () => window.cancelAnimationFrame(id)
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Po scrollu — znajdź dzień najbliżej środka i, jeśli pusty, snapuj do najbliższego z wpisem. */
+  /** Po scrollu — znajdź dzień najbliżej środka; jeśli pusty, snap-uj do najbliższego z wpisem. */
   function handleScroll() {
     if (snapTimerRef.current) window.clearTimeout(snapTimerRef.current)
     snapTimerRef.current = window.setTimeout(() => {
       const scroller = scrollerRef.current
       if (!scroller) return
-      const center = scroller.getBoundingClientRect().left + scroller.clientWidth / 2
+      const center = scroller.scrollLeft + scroller.clientWidth / 2
 
       let nearest: { date: string; dist: number } | null = null
       for (const date of days) {
         const node = dayRefs.current[date]
         if (!node) continue
-        const r = node.getBoundingClientRect()
-        const c = r.left + r.width / 2
+        const c = node.offsetLeft + node.clientWidth / 2
         const dist = Math.abs(c - center)
         if (!nearest || dist < nearest.dist) nearest = { date, dist }
       }
       if (!nearest) return
 
-      // Jeśli pusty → znajdź najbliższy dzień z wpisem.
       let target = nearest.date
       if (!daysWithEntries.has(target)) {
         const idx = days.indexOf(target)
@@ -167,17 +181,21 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
         if (best) target = best.date
       }
 
-      if (target !== active) setActive(target)
-      const node = dayRefs.current[target]
-      if (node) node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-    }, 120)
+      // KLUCZOWE: snap-scroll robimy TYLKO gdy zmienia się aktywny dzień.
+      // Inaczej wpadamy w pętlę scroll → handleScroll → scroll.
+      if (target !== active) {
+        setActive(target)
+        centerDay(target, true)
+      }
+    }, 140)
   }
 
   function selectDay(date: string) {
     if (!daysWithEntries.has(date)) return
-    setActive(date)
-    const node = dayRefs.current[date]
-    if (node) node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    if (date !== active) {
+      setActive(date)
+      centerDay(date, true)
+    }
   }
 
   const activeEntries = grouped[active] ?? []
