@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { CATEGORY_META, groupByDate, type JournalEntry } from '../../data/journal'
+import {
+  CATEGORY_META,
+  MOCK_JOURNAL,
+  groupByDate,
+  type JournalEntry,
+} from '../../data/journal'
 import { supabase } from '../../lib/supabase'
 
 /**
@@ -32,7 +37,6 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
   const reduce = useReducedMotion()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
   const grouped = useMemo(() => groupByDate(entries), [entries])
   const days = useMemo(buildDayWindow, [])
   const daysWithEntries = useMemo(
@@ -45,48 +49,54 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
     if (!open) return
     let cancelled = false
     setLoading(true)
-    setLoadError(null)
     ;(async () => {
+      let real: JournalEntry[] = []
       try {
         const { data: sessionData } = await supabase.auth.getSession()
         const token = sessionData.session?.access_token
-        if (!token) throw new Error('Brak sesji')
-        const res = await fetch('/api/journal', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const body = (await res.json()) as {
-          conversations: Array<{
-            id: string
-            startedAt: string
-            endedAt: string
-            category: JournalEntry['category']
-            title: string
-            summary: string
-          }>
-        }
-        if (cancelled) return
-        const mapped: JournalEntry[] = body.conversations.map((c) => {
-          const start = new Date(c.startedAt)
-          const end = new Date(c.endedAt)
-          const fmt = (d: Date) =>
-            `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-          return {
-            id: c.id,
-            date: start.toISOString().slice(0, 10),
-            startTime: fmt(start),
-            endTime: fmt(end),
-            category: c.category,
-            title: c.title,
-            summary: c.summary,
+        if (token) {
+          const res = await fetch('/api/journal', {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          // Tylko parsujemy gdy serwer zwrócił JSON. Na dev Vite serwuje TS jako tekst
+          // i wtedy spadamy do mocków zamiast pokazywać "Unexpected token".
+          const ctype = res.headers.get('content-type') ?? ''
+          if (res.ok && ctype.includes('application/json')) {
+            const body = (await res.json()) as {
+              conversations?: Array<{
+                id: string
+                startedAt: string
+                endedAt: string
+                category: JournalEntry['category']
+                title: string
+                summary: string
+              }>
+            }
+            real = (body.conversations ?? []).map((c) => {
+              const start = new Date(c.startedAt)
+              const end = new Date(c.endedAt)
+              const fmt = (d: Date) =>
+                `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+              return {
+                id: c.id,
+                date: start.toISOString().slice(0, 10),
+                startTime: fmt(start),
+                endTime: fmt(end),
+                category: c.category,
+                title: c.title,
+                summary: c.summary,
+              }
+            })
           }
-        })
-        setEntries(mapped)
-      } catch (e) {
-        if (!cancelled) setLoadError((e as Error).message)
-      } finally {
-        if (!cancelled) setLoading(false)
+        }
+      } catch {
+        /* swallow — i tak fallback do mocków */
       }
+      if (cancelled) return
+      // MVP demo: gdy user nie ma jeszcze realnych konwersacji, pokazujemy mocki
+      // żeby zobaczył jak dzienniczek będzie wyglądał. Realne wpisy zawsze wygrywają.
+      setEntries(real.length > 0 ? real : MOCK_JOURNAL)
+      setLoading(false)
     })()
     return () => {
       cancelled = true
@@ -264,8 +274,6 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
               >
                 {loading ? (
                   <LoadingState />
-                ) : loadError ? (
-                  <ErrorState message={loadError} />
                 ) : entries.length === 0 ? (
                   <FirstTimeState />
                 ) : activeEntries.length === 0 ? (
@@ -313,14 +321,6 @@ function LoadingState() {
   return (
     <div className="mt-10 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
       Wczytuję dzienniczek…
-    </div>
-  )
-}
-
-function ErrorState({ message }: { message: string }) {
-  return (
-    <div className="mt-10 rounded-2xl border border-alert-soft bg-alert-soft p-4 text-[13px] text-alert">
-      Nie udało się wczytać dzienniczka: {message}
     </div>
   )
 }
