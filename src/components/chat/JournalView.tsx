@@ -21,14 +21,18 @@ const PL_MONTHS = [
 ]
 const PL_WEEKDAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb']
 
-/** Generuje listę 60 dni wstecz + dziś (najstarsze pierwsze). */
+/**
+ * Generuje listę 60 dni wstecz + dziś (najstarsze pierwsze).
+ * Liczymy bezpośrednio w UTC, żeby nie złapać duplikatu/luki przy DST.
+ */
 function buildDayWindow(): string[] {
   const out: string[] = []
-  const today = new Date()
+  const now = new Date()
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+  const DAY = 86_400_000
   for (let i = 60; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(today.getDate() - i)
-    out.push(d.toISOString().slice(0, 10))
+    const iso = new Date(todayUtc - i * DAY).toISOString().slice(0, 10)
+    out.push(iso)
   }
   return out
 }
@@ -174,6 +178,9 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
   function handleScroll() {
     if (snapTimerRef.current) window.clearTimeout(snapTimerRef.current)
     snapTimerRef.current = window.setTimeout(() => {
+      // Dopóki nie wiemy jaki ma być aktywny dzień (brak wpisów / przed sync)
+      // — nie kombinujmy z setActive, żeby nie przeskoczyć na sąsiada.
+      if (active === null || daysWithEntries.size === 0) return
       const scroller = scrollerRef.current
       if (!scroller) return
       const center = scroller.scrollLeft + scroller.clientWidth / 2
