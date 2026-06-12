@@ -103,19 +103,31 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
     }
   }, [open])
 
-  // Aktywny dzień — domyślnie najnowszy z wpisami.
+  // Najnowszy dzień z wpisami (albo null gdy wpisy jeszcze się ładują).
   const newestWithEntries = useMemo(() => {
+    if (daysWithEntries.size === 0) return null
     for (let i = days.length - 1; i >= 0; i--) {
       if (daysWithEntries.has(days[i])) return days[i]
     }
-    return days[days.length - 1]
+    return null
   }, [days, daysWithEntries])
-  const [active, setActive] = useState<string>(newestWithEntries)
 
-  // Reset wyboru przy otwarciu.
+  // Aktywny dzień. `null` dopóki nie wiemy który dzień ma wpisy — nie ustawiamy
+  // fallbacku na dzisiaj (powodowało race: karuzela centrowała się na dziś,
+  // potem snap-timer mógł podchwycić inny pusty dzień gdy wpisy dopadły).
+  const [active, setActive] = useState<string | null>(null)
+
+  // Sync: gdy wpisy się załadują → ustaw aktywny na najnowszy z wpisami.
+  // Po zamknięciu: reset (następne otwarcie znów wskoczy na najnowszy).
   useEffect(() => {
-    if (open) setActive(newestWithEntries)
-  }, [open, newestWithEntries])
+    if (!open) {
+      setActive(null)
+      return
+    }
+    if (active === null && newestWithEntries) {
+      setActive(newestWithEntries)
+    }
+  }, [open, newestWithEntries, active])
 
   const scrollerRef = useRef<HTMLDivElement>(null)
   const dayRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -143,13 +155,20 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
     scroller.scrollTo({ left: target, behavior: smooth ? 'smooth' : 'auto' })
   }
 
-  // Po otwarciu — scroll aktywnego dnia do środka (bez animacji).
+  // Po pierwszym ustawieniu aktywnego dnia (sync z newest-with-entries) —
+  // natychmiastowy scroll do środka. selectDay/snap same robią centerDay
+  // smooth i zaznaczają to przez `skipNextCenterRef`, żeby ten efekt nie
+  // anulował ich animacji.
+  const skipNextCenterRef = useRef(false)
   useEffect(() => {
-    if (!open) return
-    // requestAnimationFrame, żeby layout się ustabilizował przed pomiarem.
+    if (!open || !active) return
+    if (skipNextCenterRef.current) {
+      skipNextCenterRef.current = false
+      return
+    }
     const id = window.requestAnimationFrame(() => centerDay(active, false))
     return () => window.cancelAnimationFrame(id)
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, active])
 
   /** Po scrollu — znajdź dzień najbliżej środka; jeśli pusty, snap-uj do najbliższego z wpisem. */
   function handleScroll() {
@@ -184,6 +203,7 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
       // KLUCZOWE: snap-scroll robimy TYLKO gdy zmienia się aktywny dzień.
       // Inaczej wpadamy w pętlę scroll → handleScroll → scroll.
       if (target !== active) {
+        skipNextCenterRef.current = true
         setActive(target)
         centerDay(target, true)
       }
@@ -193,14 +213,20 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
   function selectDay(date: string) {
     if (!daysWithEntries.has(date)) return
     if (date !== active) {
+      skipNextCenterRef.current = true
       setActive(date)
       centerDay(date, true)
     }
   }
 
-  const activeEntries = grouped[active] ?? []
-  const activeDate = new Date(active + 'T00:00:00')
-  const monthLabel = `${PL_MONTHS[activeDate.getMonth()]} ${activeDate.getFullYear()}`
+  // Dopóki nie znamy najnowszego dnia z wpisami, pokazujemy nagłówek bieżącego
+  // miesiąca (dzisiaj) i pustą listę — UI nie miga, a loading state powyżej
+  // poinformuje że dane się ładują.
+  const fallbackDate = days[days.length - 1] ?? new Date().toISOString().slice(0, 10)
+  const displayDate = active ?? fallbackDate
+  const activeEntries = active ? grouped[active] ?? [] : []
+  const activeDateObj = new Date(displayDate + 'T00:00:00')
+  const monthLabel = `${PL_MONTHS[activeDateObj.getMonth()]} ${activeDateObj.getFullYear()}`
 
   return (
     <AnimatePresence>
@@ -326,7 +352,7 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
           <div className="flex-1 overflow-y-auto px-5 pt-4 pb-6">
             <AnimatePresence mode="wait">
               <motion.div
-                key={active}
+                key={active ?? 'loading'}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}

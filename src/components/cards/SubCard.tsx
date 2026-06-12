@@ -40,7 +40,7 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
       onClick={() => onClick?.(sub)}
       className={clsx(
         'relative grid cursor-pointer grid-cols-[72px_1fr_48px] items-center gap-[14px]',
-        'rounded-[18px] border border-hairline bg-bg-card p-[18px] pl-5',
+        'rounded-[18px] border border-hairline bg-bg-card pl-5 pr-[18px] pt-[30px] pb-[18px]',
         'transition-all duration-150 hover:border-ink-tertiary active:scale-[0.985]',
         isCritical && 'border-l-[3px] border-l-alert',
         highlight && 'new-card',
@@ -60,6 +60,10 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
       <div className="text-left">
         {isToday ? (
           <>
+            <div className="mb-[6px] flex items-center gap-[5px] font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-alert">
+              <AlertGlyph />
+              Uwaga
+            </div>
             <div className="font-serif text-[30px] font-normal italic leading-none text-alert">
               Dziś
             </div>
@@ -91,12 +95,6 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
 
       {/* Info */}
       <div className="min-w-0">
-        {isToday && (
-          <div className="mb-[3px] flex items-center gap-[5px] font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-alert">
-            <AlertGlyph />
-            Uwaga
-          </div>
-        )}
         <div className="mb-[3px] overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-medium tracking-[-0.01em] text-ink-primary">
           {sub.name}
         </div>
@@ -111,8 +109,8 @@ export function SubCard({ sub, onClick, highlight }: SubCardProps) {
       {/* Kategoria — pill w prawym górnym rogu (te same nazwy co w dzienniczku). */}
       <span
         className={clsx(
-          'absolute right-3 top-3 max-w-[55%] truncate rounded-pill px-2 py-[3px]',
-          'font-mono text-[8.5px] uppercase tracking-[0.1em]',
+          'absolute right-[10px] top-[8px] max-w-[48%] truncate rounded-pill px-[7px] py-[2px]',
+          'font-mono text-[7.5px] uppercase tracking-[0.08em]',
           categoryMeta.pillClass,
         )}
         title={categoryMeta.label}

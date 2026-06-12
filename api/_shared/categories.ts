@@ -30,7 +30,7 @@ export type CategoryId = (typeof CATEGORY_IDS)[number]
 export const CATEGORY_LABELS: Record<CategoryId, string> = {
   media_vod: 'Media i VOD',
   audio_podcasts: 'Audio i Podcasty',
-  design_creative: 'Narzędzia Designera i Kreatywne',
+  design_creative: 'Designer Tools',
   ai_tools: 'Narzędzia AI',
   productivity_cloud: 'Produktywność i Chmura',
   shopping_gaming: 'Zakupy i Gaming',
@@ -52,7 +52,7 @@ export function isCategoryId(value: unknown): value is CategoryId {
 export const CATEGORY_GUIDE_FOR_LLM = `Dozwolone kategorie (id → znaczenie, przykłady):
 - media_vod → "Media i VOD": Netflix, HBO Max, Disney+, Apple TV+, Player, Canal+, YouTube Premium, Prime Video
 - audio_podcasts → "Audio i Podcasty": Spotify, Apple Music, Tidal, Deezer, Audible, Storytel, Empik Go, podcasty premium
-- design_creative → "Narzędzia Designera i Kreatywne": Figma, Adobe Creative Cloud (Photoshop/Lightroom/Premiere), Canva, Framer, Sketch, Affinity
+- design_creative → "Designer Tools": Figma, Adobe Creative Cloud (Photoshop/Lightroom/Premiere), Canva, Framer, Sketch, Affinity
 - ai_tools → "Narzędzia AI": ChatGPT, Claude, Gemini, Perplexity, Midjourney, Runway, Copilot, Cursor, Notion AI
 - productivity_cloud → "Produktywność i Chmura": Notion, Linear, Slack, Google Workspace, Microsoft 365, iCloud+, Dropbox, 1Password, NordVPN, ExpressVPN, menedżery haseł, VPN
 - shopping_gaming → "Zakupy i Gaming": Amazon Prime, Allegro Smart, Xbox Game Pass, PlayStation Plus, Nintendo Online, Steam Family
