@@ -13,6 +13,7 @@ const SECTIONS: SectionRef[] = [
   { id: 'create', label: 'Create' },
   { id: 'ask', label: 'Ask' },
   { id: 'read', label: 'Read' },
+  { id: 'journal', label: 'Journal' },
 ]
 
 export function ApiTab() {
@@ -96,12 +97,20 @@ export function ApiTab() {
               Domyślnie <InlineCode>"renewal"</InlineCode>. <InlineCode>"trial"</InlineCode> tylko
               gdy świadomie zaznaczasz okres próbny.
             </ParamRow>
+            <ParamRow
+              name="category"
+              type='"media_vod" | "audio_podcasts" | "design_creative" | "ai_tools" | "productivity_cloud" | "shopping_gaming" | "other"'
+            >
+              Kategoria taksonomii Ostatni Dzień. Opcjonalna w REST — gdy pominiesz, ląduje
+              w <InlineCode>"other"</InlineCode>. Agent AI (chat + MCP) wymusza wybór jednej
+              z 7 wartości.
+            </ParamRow>
           </div>
           <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
           <Code language="curl">{`curl -X POST https://ostatnidzien.app/api/subscriptions \\
   -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"name":"Netflix","amountPLN":29.99}'`}</Code>
+  -d '{"name":"Netflix","amountPLN":29.99,"category":"media_vod"}'`}</Code>
           <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 201</h4>
           <Code language="json">{`{
   "subscription": {
@@ -111,7 +120,8 @@ export function ApiTab() {
     "date": "Dziś · 9:00",
     "daysUntil": 0,
     "type": "renewal",
-    "status": "active"
+    "status": "active",
+    "category": "media_vod"
   }
 }`}</Code>
 
@@ -204,9 +214,91 @@ export function ApiTab() {
       "date": "Dziś · 9:00",
       "daysUntil": 0,
       "type": "renewal",
-      "status": "active"
+      "status": "active",
+      "category": "media_vod"
     }
   ]
+}`}</Code>
+        </section>
+
+        <section id="journal" className="mb-24 scroll-mt-32">
+          <Eyebrow>API · Journal</Eyebrow>
+          <h2 className="mb-2 font-serif text-[28px] leading-tight text-ink-primary">
+            Dzienniczek Rozmów
+          </h2>
+          <p className="mb-6 text-[14.5px] leading-relaxed text-ink-secondary">
+            Persystowane podsumowania konwersacji z Subskrypcikiem: kategoria z taksonomii,
+            tytuł, 2-3 zdania wniosku. Sesje krótsze niż 4 wiadomości są pomijane.
+          </p>
+
+          <h3 className="mt-8 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Pobierz historię
+          </h3>
+          <EndpointHeader method="GET" path="/api/journal" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Query</h4>
+          <div>
+            <ParamRow name="from" type="ISO 8601 string">
+              Początek zakresu. Domyślnie 60 dni temu.
+            </ParamRow>
+            <ParamRow name="to" type="ISO 8601 string">
+              Koniec zakresu. Domyślnie teraz.
+            </ParamRow>
+          </div>
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl "https://ostatnidzien.app/api/journal?from=2026-05-01&to=2026-06-30" \\
+  -H "Authorization: Bearer $TOKEN"`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{
+  "conversations": [
+    {
+      "id": "fbd953bf-23f0-456c-94ce-102570d74f04",
+      "startedAt": "2026-06-12T18:30:00.000Z",
+      "endedAt":   "2026-06-12T18:42:00.000Z",
+      "category": "media_vod",
+      "title": "Canal+ — brak informacji o cenach",
+      "summary": "Subskrypcik nie znalazł aktualnego cennika Canal+...",
+      "messageCount": 8
+    }
+  ]
+}`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Zapisz zamkniętą sesję
+          </h3>
+          <p className="mb-4 text-[13px] text-ink-tertiary">
+            Wywoływane automatycznie przez frontend przy zamknięciu czatu. Jeśli{' '}
+            <InlineCode>messages.length &lt; 4</InlineCode>, endpoint zwraca{' '}
+            <InlineCode>{`{ skipped: true }`}</InlineCode> bez zapisu.
+          </p>
+          <EndpointHeader method="POST" path="/api/journal" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Body</h4>
+          <div>
+            <ParamRow name="action" type='"finalize"' required>
+              Stała wartość.
+            </ParamRow>
+            <ParamRow name="messages" type="Array<{ role, content }>" required>
+              Pełna historia rozmowy (user + assistant). Backend wywołuje LLM żeby
+              wygenerować tytuł, kategorię i podsumowanie.
+            </ParamRow>
+            <ParamRow name="startedAt" type="ISO 8601 string" required>
+              Moment pierwszej wiadomości.
+            </ParamRow>
+            <ParamRow name="endedAt" type="ISO 8601 string" required>
+              Moment zamknięcia czatu.
+            </ParamRow>
+          </div>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{
+  "ok": true,
+  "saved": {
+    "id": "fbd953bf-23f0-456c-94ce-102570d74f04",
+    "startedAt": "2026-06-12T18:30:00.000Z",
+    "endedAt":   "2026-06-12T18:42:00.000Z",
+    "category": "media_vod",
+    "title": "Canal+ — brak informacji o cenach",
+    "summary": "...",
+    "messageCount": 8
+  }
 }`}</Code>
         </section>
       </main>

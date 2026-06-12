@@ -142,13 +142,13 @@ export function McpTab() {
           <Code language="json">{`{
   "content": [{
     "type": "text",
-    "text": "{ \\"subscriptions\\": [ { \\"id\\": \\"spotify\\", \\"name\\": \\"Spotify Family\\", \\"amountPLN\\": 29.99, \\"date\\": \\"6 czerwca · 8:00\\", \\"daysUntil\\": 6, \\"type\\": \\"renewal\\", \\"status\\": \\"active\\" } ] }"
+    "text": "{ \\"subscriptions\\": [ { \\"id\\": \\"spotify\\", \\"name\\": \\"Spotify Family\\", \\"amountPLN\\": 29.99, \\"date\\": \\"6 czerwca · 8:00\\", \\"daysUntil\\": 6, \\"type\\": \\"renewal\\", \\"status\\": \\"active\\", \\"category\\": \\"audio_podcasts\\" } ] }"
   }]
 }`}</Code>
 
           <ToolHeader
             name="add_subscription"
-            description="Dodaje nową subskrypcję dla zalogowanego użytkownika."
+            description="Dodaje nową subskrypcję dla zalogowanego użytkownika. Wymaga wybrania kategorii z taksonomii Ostatni Dzień."
           />
           <div>
             <ParamRow name="name" type="string" required>
@@ -156,6 +156,19 @@ export function McpTab() {
             </ParamRow>
             <ParamRow name="amountPLN" type="number" required>
               Kwota miesięczna w PLN.
+            </ParamRow>
+            <ParamRow
+              name="category"
+              type='"media_vod" | "audio_podcasts" | "design_creative" | "ai_tools" | "productivity_cloud" | "shopping_gaming" | "other"'
+              required
+            >
+              Kategoria z 7-elementowej taksonomii: <InlineCode>media_vod</InlineCode>{' '}
+              (Netflix/HBO/Disney+), <InlineCode>audio_podcasts</InlineCode>{' '}
+              (Spotify/Apple Music/Audible), <InlineCode>design_creative</InlineCode>{' '}
+              (Figma/Adobe/Canva), <InlineCode>ai_tools</InlineCode>{' '}
+              (ChatGPT/Claude/Midjourney), <InlineCode>productivity_cloud</InlineCode>{' '}
+              (Notion/Slack/iCloud/1Password/VPN), <InlineCode>shopping_gaming</InlineCode>{' '}
+              (Prime/Xbox/PlayStation), <InlineCode>other</InlineCode>.
             </ParamRow>
             <ParamRow name="daysUntil" type="integer">
               Dni do najbliższego pobrania. Domyślnie <InlineCode>0</InlineCode>.
@@ -172,6 +185,7 @@ export function McpTab() {
   "arguments": {
     "name": "HBO Max",
     "amountPLN": 31.99,
+    "category": "media_vod",
     "daysUntil": 12,
     "type": "renewal"
   }
@@ -182,7 +196,7 @@ export function McpTab() {
           <Code language="json">{`{
   "content": [{
     "type": "text",
-    "text": "{ \\"subscription\\": { \\"id\\": \\"user-1781200065271\\", \\"name\\": \\"HBO Max\\", \\"amountPLN\\": 31.99, \\"date\\": \\"23 czerwca · 9:00\\", \\"daysUntil\\": 12, \\"type\\": \\"renewal\\", \\"status\\": \\"active\\" } }"
+    "text": "{ \\"subscription\\": { \\"id\\": \\"user-1781200065271\\", \\"name\\": \\"HBO Max\\", \\"amountPLN\\": 31.99, \\"date\\": \\"23 czerwca · 9:00\\", \\"daysUntil\\": 12, \\"type\\": \\"renewal\\", \\"status\\": \\"active\\", \\"category\\": \\"media_vod\\" } }"
   }]
 }`}</Code>
 
@@ -212,6 +226,44 @@ export function McpTab() {
   "content": [{
     "type": "text",
     "text": "{ \\"subscription\\": { \\"id\\": \\"user-1781200065271\\", \\"name\\": \\"HBO Max\\", \\"status\\": \\"paused\\" } }"
+  }]
+}`}</Code>
+
+          <ToolHeader
+            name="list_journal_entries"
+            description="Pamięć długoterminowa agenta. Zwraca podsumowania zamkniętych konwersacji usera z Subskrypcikiem — kategoria, tytuł, 2–3 zdania wniosku, czas trwania."
+          />
+          <div>
+            <ParamRow name="from" type="ISO 8601 string">
+              Początek zakresu. Domyślnie 60 dni temu.
+            </ParamRow>
+            <ParamRow name="to" type="ISO 8601 string">
+              Koniec zakresu. Domyślnie teraz.
+            </ParamRow>
+            <ParamRow
+              name="category"
+              type='"media_vod" | "audio_podcasts" | "design_creative" | "ai_tools" | "productivity_cloud" | "shopping_gaming" | "other"'
+            >
+              Opcjonalny filtr po kategorii.
+            </ParamRow>
+            <ParamRow name="limit" type="integer (1–100)">
+              Domyślnie <InlineCode>50</InlineCode>.
+            </ParamRow>
+          </div>
+          <h4 className="mt-4 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+            Przykład wywołania
+          </h4>
+          <Code language="json">{`{
+  "name": "list_journal_entries",
+  "arguments": { "category": "media_vod", "limit": 10 }
+}`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+            Przykład odpowiedzi
+          </h4>
+          <Code language="json">{`{
+  "content": [{
+    "type": "text",
+    "text": "{ \\"entries\\": [ { \\"id\\": \\"fbd953bf-...\\", \\"startedAt\\": \\"2026-06-12T18:30:00Z\\", \\"endedAt\\": \\"2026-06-12T18:42:00Z\\", \\"category\\": \\"media_vod\\", \\"title\\": \\"Canal+ — brak informacji o cenach\\", \\"summary\\": \\"...\\", \\"messageCount\\": 8 } ] }"
   }]
 }`}</Code>
 

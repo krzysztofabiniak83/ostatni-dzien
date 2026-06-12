@@ -280,7 +280,11 @@ export function ChatSheet({
               />
             </div>
 
-            <JournalView open={journalOpen} onClose={() => setJournalOpen(false)} />
+            <JournalView
+              open={journalOpen}
+              onClose={() => setJournalOpen(false)}
+              onCloseSheet={onClose}
+            />
           </motion.div>
         </>
       )}

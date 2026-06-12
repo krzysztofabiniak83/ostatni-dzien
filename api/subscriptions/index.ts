@@ -1,6 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { getUserFromRequest } from '../_shared/auth.js'
 import { formatSubDate, sectionFor, urgencyFor } from '../_shared/format.js'
+import {
+  CATEGORY_IDS,
+  DEFAULT_CATEGORY,
+  isCategoryId,
+} from '../_shared/categories.js'
 
 /**
  * GET  /api/subscriptions  → lista active + paused usera.
@@ -21,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select('id,name,amount_pln,date,days_until,type,status')
+      .select('id,name,amount_pln,date,days_until,type,status,category')
       .eq('user_id', userId)
       .in('status', ['active', 'paused'])
       .order('days_until', { ascending: true })
@@ -40,6 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         daysUntil: s.days_until,
         type: s.type,
         status: s.status,
+        category: s.category,
       })),
     })
     return
@@ -51,6 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     amountPLN?: number
     daysUntil?: number
     type?: 'trial' | 'renewal'
+    category?: string
   }
 
   const name = (body?.name ?? '').trim()
@@ -62,6 +69,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
     return
   }
+  // category opcjonalne (legacy clients) — domyślnie 'other'. Jeśli podane, musi być z listy.
+  if (body.category !== undefined && !isCategoryId(body.category)) {
+    res.status(400).json({
+      error: 'invalid_body',
+      message: `category musi być jedną z: ${CATEGORY_IDS.join(', ')}.`,
+    })
+    return
+  }
+  const category = isCategoryId(body.category) ? body.category : DEFAULT_CATEGORY
 
   const daysUntil = Math.max(0, Math.floor(body.daysUntil ?? 0))
   const subType: 'trial' | 'renewal' = body.type === 'trial' ? 'trial' : 'renewal'
@@ -87,6 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     chart_heights: [0, 0, 0, 0, 0, 4],
     chart_total_pln: 0,
     status: 'active',
+    category,
   })
 
   if (insErr) {
@@ -96,7 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { data: verify } = await supabase
     .from('subscriptions')
-    .select('id,name,amount_pln,date,days_until,type,status')
+    .select('id,name,amount_pln,date,days_until,type,status,category')
     .eq('id', id)
     .eq('user_id', userId)
     .maybeSingle()
@@ -115,6 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       daysUntil: verify.days_until,
       type: verify.type,
       status: verify.status,
+      category: verify.category,
     },
   })
 }

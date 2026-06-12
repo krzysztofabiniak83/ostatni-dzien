@@ -37,7 +37,17 @@ function buildDayWindow(): string[] {
   return out
 }
 
-export function JournalView({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function JournalView({
+  open,
+  onClose,
+  onCloseSheet,
+}: {
+  open: boolean
+  /** Zamyka tylko dzienniczek (powrót do czatu). */
+  onClose: () => void
+  /** Zamyka cały ChatSheet — używane przez iOS drag-handle u góry. */
+  onCloseSheet: () => void
+}) {
   const reduce = useReducedMotion()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(false)
@@ -244,10 +254,19 @@ export function JournalView({ open, onClose }: { open: boolean; onClose: () => v
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 12 }}
           transition={{ duration: reduce ? 0 : 0.22, ease: [0.32, 0.72, 0, 1] }}
-          className="absolute inset-0 z-[30] flex flex-col bg-bg-base"
+          className="absolute inset-0 z-[30] flex flex-col overflow-hidden rounded-t-[24px] bg-bg-base"
         >
+          {/* iOS-style drag handle — zwija cały ChatSheet (jak na czacie). */}
+          <div className="flex justify-center pt-3 pb-1">
+            <button
+              aria-label="Zamknij"
+              onClick={onCloseSheet}
+              className="h-[5px] w-[40px] rounded-full bg-hairline transition-colors hover:bg-ink-tertiary"
+            />
+          </div>
+
           {/* Header dzienniczka */}
-          <div className="flex items-center justify-between px-5 pt-3 pb-2">
+          <div className="flex items-center justify-between px-5 pt-2 pb-2">
             <button
               onClick={onClose}
               className="flex h-[34px] items-center gap-1.5 rounded-full border border-hairline pl-2 pr-3 text-ink-secondary transition-colors hover:border-ink-tertiary"
