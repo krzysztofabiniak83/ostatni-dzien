@@ -1,3 +1,4 @@
+import type React from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import {
@@ -8,6 +9,7 @@ import {
   type JournalPhoto,
 } from '../../data/journal'
 import { supabase } from '../../lib/supabase'
+import { Toast } from '../ui/Toast'
 
 /**
  * Dzienniczek Rozmów — pełnoekranowa nakładka wewnątrz ChatSheet.
@@ -75,6 +77,14 @@ export function JournalView({
 
   const [refreshTick, setRefreshTick] = useState(0)
   const refresh = () => setRefreshTick((n) => n + 1)
+
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimerRef = useRef<number | null>(null)
+  const flashToast = (msg: string) => {
+    setToast(msg)
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = window.setTimeout(() => setToast(null), 2200)
+  }
 
   // Pobranie realnych konwersacji po otwarciu dzienniczka.
   useEffect(() => {
@@ -475,11 +485,14 @@ export function JournalView({
                 ) : activeEntries.length === 0 ? (
                   <EmptyState />
                 ) : (
-                  activeEntries.map((e) => <EntryCard key={e.id} entry={e} onChanged={refresh} />)
+                  activeEntries.map((e) => (
+                    <EntryCard key={e.id} entry={e} onChanged={refresh} onToast={flashToast} />
+                  ))
                 )}
               </motion.div>
             </AnimatePresence>
           </div>
+          <Toast message={toast} />
         </motion.div>
       )}
     </AnimatePresence>
@@ -494,7 +507,15 @@ function isRealEntry(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(id)
 }
 
-function EntryCard({ entry, onChanged }: { entry: JournalEntry; onChanged: () => void }) {
+function EntryCard({
+  entry,
+  onChanged,
+  onToast,
+}: {
+  entry: JournalEntry
+  onChanged: () => void
+  onToast: (msg: string) => void
+}) {
   const meta = CATEGORY_META[entry.category]
   const photos = entry.photos ?? []
   const canEdit = isRealEntry(entry.id)
@@ -554,6 +575,7 @@ function EntryCard({ entry, onChanged }: { entry: JournalEntry; onChanged: () =>
         }
       }
       onChanged()
+      onToast(arr.length === 1 ? 'Dodano zdjęcie' : `Dodano ${arr.length} zdjęcia`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Błąd uploadu.')
     } finally {
@@ -578,6 +600,7 @@ function EntryCard({ entry, onChanged }: { entry: JournalEntry; onChanged: () =>
         throw new Error(j.message || 'Usuwanie nie powiodło się.')
       }
       onChanged()
+      onToast('Usunięto zdjęcie')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Błąd usuwania.')
     } finally {
@@ -603,7 +626,12 @@ function EntryCard({ entry, onChanged }: { entry: JournalEntry; onChanged: () =>
 
       {photos.length > 0 && (
         <div className="mt-3">
-          <PhotoGallery photos={photos} onOpen={(i) => setLightboxIdx(i)} />
+          <PhotoGallery
+            photos={photos}
+            onOpen={(i) => setLightboxIdx(i)}
+            onDelete={canEdit ? handleDelete : undefined}
+            busy={busy}
+          />
         </div>
       )}
 
@@ -658,58 +686,79 @@ function EntryCard({ entry, onChanged }: { entry: JournalEntry; onChanged: () =>
   )
 }
 
-function PhotoGallery({ photos, onOpen }: { photos: JournalPhoto[]; onOpen: (idx: number) => void }) {
+function PhotoGallery({
+  photos,
+  onOpen,
+  onDelete,
+  busy,
+}: {
+  photos: JournalPhoto[]
+  onOpen: (idx: number) => void
+  onDelete?: (p: JournalPhoto) => Promise<void>
+  busy?: boolean
+}) {
   const n = photos.length
-  if (n === 1) {
-    const p = photos[0]
+
+  function Thumb({ p, idx, aspect, overlay }: { p: JournalPhoto; idx: number; aspect: string; overlay?: React.ReactNode }) {
     return (
-      <button
-        type="button"
-        onClick={() => onOpen(0)}
-        className="block w-full overflow-hidden rounded-sm bg-bg-subtle"
-        style={{ aspectRatio: '4 / 3' }}
-      >
-        {p.signedUrl && <img src={p.signedUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
-      </button>
-    )
-  }
-  if (n === 2 || n === 3) {
-    return (
-      <div className={`grid gap-2 ${n === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-        {photos.map((p, i) => (
+      <div className="relative" style={{ aspectRatio: aspect }}>
+        <button
+          type="button"
+          onClick={() => onOpen(idx)}
+          className="block h-full w-full overflow-hidden rounded-sm bg-bg-subtle"
+        >
+          {p.signedUrl && <img src={p.signedUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
+          {overlay}
+        </button>
+        {onDelete && (
           <button
-            key={p.id}
             type="button"
-            onClick={() => onOpen(i)}
-            className="overflow-hidden rounded-sm bg-bg-subtle"
-            style={{ aspectRatio: '1 / 1' }}
+            onClick={async (e) => {
+              e.stopPropagation()
+              if (busy) return
+              await onDelete(p)
+            }}
+            disabled={busy}
+            aria-label="Usuń zdjęcie"
+            className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-ink-primary/70 text-bg-base backdrop-blur-sm transition-all hover:bg-ink-primary disabled:opacity-40"
           >
-            {p.signedUrl && <img src={p.signedUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
+            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
-        ))}
+        )}
       </div>
     )
   }
+
+  if (n === 1) return <Thumb p={photos[0]} idx={0} aspect="4 / 3" />
+
+  if (n === 2 || n === 3) {
+    return (
+      <div className={`grid gap-2 ${n === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {photos.map((p, i) => <Thumb key={p.id} p={p} idx={i} aspect="1 / 1" />)}
+      </div>
+    )
+  }
+
   // 4+ → grid 2x2, 4. kafelek z overlay +N (przy >4)
   const visible = photos.slice(0, 4)
   const extra = n - 4
   return (
     <div className="grid grid-cols-2 gap-2">
       {visible.map((p, i) => (
-        <button
+        <Thumb
           key={p.id}
-          type="button"
-          onClick={() => onOpen(i)}
-          className="relative overflow-hidden rounded-sm bg-bg-subtle"
-          style={{ aspectRatio: '1 / 1' }}
-        >
-          {p.signedUrl && <img src={p.signedUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
-          {i === 3 && extra > 0 && (
+          p={p}
+          idx={i}
+          aspect="1 / 1"
+          overlay={i === 3 && extra > 0 ? (
             <div className="absolute inset-0 flex items-center justify-center bg-ink-primary/55 font-serif text-[22px] text-bg-base">
               +{extra}
             </div>
-          )}
-        </button>
+          ) : undefined}
+        />
       ))}
     </div>
   )
