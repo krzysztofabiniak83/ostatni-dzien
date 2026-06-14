@@ -648,18 +648,25 @@ function EntryCard({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={busy || photos.length >= MAX_PHOTOS}
-            className="flex h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-hairline bg-bg-subtle/40 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-secondary transition-colors hover:border-ink-tertiary hover:text-ink-primary disabled:opacity-40"
+            className="group inline-flex h-[44px] w-full items-center justify-center gap-2.5 rounded-md border border-hairline bg-bg-card font-sans text-[14px] font-medium text-ink-primary transition-all duration-150 hover:border-accent hover:bg-accent-soft hover:text-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-hairline disabled:hover:bg-bg-card disabled:hover:text-ink-primary"
             aria-label="Dodaj zdjęcie do podsumowania"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
               <circle cx="12" cy="13" r="4" />
             </svg>
-            {busy
-              ? 'Wgrywam…'
-              : photos.length >= MAX_PHOTOS
-                ? `Limit ${MAX_PHOTOS} zdjęć`
-                : `Dodaj zdjęcie do podsumowania (${photos.length}/${MAX_PHOTOS})`}
+            <span>
+              {busy
+                ? 'Wgrywam…'
+                : photos.length >= MAX_PHOTOS
+                  ? `Limit ${MAX_PHOTOS} zdjęć`
+                  : 'Dodaj zdjęcie'}
+            </span>
+            {!busy && photos.length < MAX_PHOTOS && (
+              <span className="font-mono text-[11px] text-ink-tertiary group-hover:text-accent/70">
+                {photos.length}/{MAX_PHOTOS}
+              </span>
+            )}
           </button>
           <input
             ref={fileInputRef}
