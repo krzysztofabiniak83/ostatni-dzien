@@ -62,6 +62,15 @@ export const CATEGORY_META: Record<JournalCategory, JournalCategoryMeta> = {
   },
 }
 
+export interface JournalPhoto {
+  id: string
+  signedUrl: string | null
+  mimeType: string
+  width: number | null
+  height: number | null
+  position: number
+}
+
 export interface JournalEntry {
   id: string
   /** ISO `YYYY-MM-DD` — klucz dnia, po którym grupujemy. */
@@ -72,6 +81,7 @@ export interface JournalEntry {
   category: JournalCategory
   title: string
   summary: string
+  photos?: JournalPhoto[]
 }
 
 /**
@@ -90,6 +100,9 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     title: 'Netflix — podwyżka i co dalej',
     summary:
       'Rozmowa o nowym cenniku Netflixa (67 zł/mc) i czy zostać. Subskrypcik zaproponował pauzę na miesiąc i porównanie z HBO Max — odłożyłem decyzję na koniec czerwca.',
+    photos: [
+      { id: 'demo-1a-1', signedUrl: 'https://picsum.photos/seed/netflix1/800/600', mimeType: 'image/jpeg', width: 800, height: 600, position: 0 },
+    ],
   },
   {
     id: 'j-jun-11b',
@@ -100,6 +113,13 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     title: 'ChatGPT Plus vs Claude Pro',
     summary:
       'Porównanie planów AI pod kątem mojego użycia (pisanie + kod). Rekomendacja: przetestować Claude równolegle przez miesiąc zanim zrezygnuję z ChatGPT.',
+    photos: [
+      { id: 'demo-1b-1', signedUrl: 'https://picsum.photos/seed/ai1/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 0 },
+      { id: 'demo-1b-2', signedUrl: 'https://picsum.photos/seed/ai2/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 1 },
+      { id: 'demo-1b-3', signedUrl: 'https://picsum.photos/seed/ai3/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 2 },
+      { id: 'demo-1b-4', signedUrl: 'https://picsum.photos/seed/ai4/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 3 },
+      { id: 'demo-1b-5', signedUrl: 'https://picsum.photos/seed/ai5/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 4 },
+    ],
   },
   {
     id: 'j-jun-09',
@@ -110,6 +130,10 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     title: 'Figma — przejście na plan roczny',
     summary:
       'Sprawdziliśmy, czy plan roczny Figmy się opłaca. Przy obecnym tempie pracy zwrot po 8 miesiącach. Przypomnienie na koniec bieżącego cyklu miesięcznego.',
+    photos: [
+      { id: 'demo-2-1', signedUrl: 'https://picsum.photos/seed/figma1/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 0 },
+      { id: 'demo-2-2', signedUrl: 'https://picsum.photos/seed/figma2/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 1 },
+    ],
   },
   {
     id: 'j-jun-05',
@@ -120,6 +144,11 @@ export const MOCK_JOURNAL: JournalEntry[] = [
     title: '1Password — rodzina czy solo',
     summary:
       'Analiza planu rodzinnego dla 3 osób. Wniosek: tak, oszczędność 12 zł/mc względem trzech kont solo. Zmiana zaplanowana na nowy okres rozliczeniowy.',
+    photos: [
+      { id: 'demo-3-1', signedUrl: 'https://picsum.photos/seed/op1/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 0 },
+      { id: 'demo-3-2', signedUrl: 'https://picsum.photos/seed/op2/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 1 },
+      { id: 'demo-3-3', signedUrl: 'https://picsum.photos/seed/op3/600/600', mimeType: 'image/jpeg', width: 600, height: 600, position: 2 },
+    ],
   },
 
   // ── MAJ 2026 ───────────────────────────────────────────────────

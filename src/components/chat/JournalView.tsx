@@ -5,6 +5,7 @@ import {
   MOCK_JOURNAL,
   groupByDate,
   type JournalEntry,
+  type JournalPhoto,
 } from '../../data/journal'
 import { supabase } from '../../lib/supabase'
 
@@ -72,6 +73,9 @@ export function JournalView({
   }, [daysWithEntries])
   const days = useMemo(() => buildDayWindow(oldestEntryDate), [oldestEntryDate])
 
+  const [refreshTick, setRefreshTick] = useState(0)
+  const refresh = () => setRefreshTick((n) => n + 1)
+
   // Pobranie realnych konwersacji po otwarciu dzienniczka.
   useEffect(() => {
     if (!open) return
@@ -98,6 +102,7 @@ export function JournalView({
                 category: JournalEntry['category']
                 title: string
                 summary: string
+                photos?: JournalPhoto[]
               }>
             }
             real = (body.conversations ?? []).map((c) => {
@@ -113,6 +118,7 @@ export function JournalView({
                 category: c.category,
                 title: c.title,
                 summary: c.summary,
+                photos: c.photos ?? [],
               }
             })
           }
@@ -129,7 +135,7 @@ export function JournalView({
     return () => {
       cancelled = true
     }
-  }, [open])
+  }, [open, refreshTick])
 
   // Najnowszy dzień z wpisami (albo null gdy wpisy jeszcze się ładują).
   const newestWithEntries = useMemo(() => {
@@ -469,7 +475,7 @@ export function JournalView({
                 ) : activeEntries.length === 0 ? (
                   <EmptyState />
                 ) : (
-                  activeEntries.map((e) => <EntryCard key={e.id} entry={e} />)
+                  activeEntries.map((e) => <EntryCard key={e.id} entry={e} onChanged={refresh} />)
                 )}
               </motion.div>
             </AnimatePresence>
@@ -480,8 +486,105 @@ export function JournalView({
   )
 }
 
-function EntryCard({ entry }: { entry: JournalEntry }) {
+const MAX_PHOTOS = 6
+const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+
+/** Wpis dzienniczka zapisany w Supabase ma id w formacie UUID. Mocki używają 'j-...'. */
+function isRealEntry(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(id)
+}
+
+function EntryCard({ entry, onChanged }: { entry: JournalEntry; onChanged: () => void }) {
   const meta = CATEGORY_META[entry.category]
+  const photos = entry.photos ?? []
+  const canEdit = isRealEntry(entry.id)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return
+    setError(null)
+    const remaining = MAX_PHOTOS - photos.length
+    const arr = Array.from(files).slice(0, remaining)
+    if (arr.length === 0) {
+      setError(`Max ${MAX_PHOTOS} zdjęć na wpis.`)
+      return
+    }
+    setBusy(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error('Brak sesji.')
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) throw new Error('Brak usera.')
+
+      for (const file of arr) {
+        if (!ALLOWED_MIME.includes(file.type)) {
+          throw new Error(`Nieobsługiwany typ: ${file.type || 'unknown'}`)
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error('Plik większy niż 10 MB.')
+        }
+        const photoId = (crypto as Crypto & { randomUUID(): string }).randomUUID()
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+        const path = `${userId}/${entry.id}/${photoId}.${ext}`
+        const up = await supabase.storage.from('journal-photos').upload(path, file, {
+          contentType: file.type,
+          upsert: false,
+        })
+        if (up.error) throw new Error(up.error.message)
+        const res = await fetch('/api/journal-photos', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            conversationId: entry.id,
+            storagePath: path,
+            mimeType: file.type,
+            sizeBytes: file.size,
+            originalName: file.name,
+          }),
+        })
+        if (!res.ok) {
+          await supabase.storage.from('journal-photos').remove([path])
+          const j = (await res.json().catch(() => ({}))) as { message?: string }
+          throw new Error(j.message || 'Zapis metadanych nie powiódł się.')
+        }
+      }
+      onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Błąd uploadu.')
+    } finally {
+      setBusy(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  async function handleDelete(photo: JournalPhoto) {
+    setError(null)
+    setBusy(true)
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error('Brak sesji.')
+      const res = await fetch(`/api/journal-photos?id=${encodeURIComponent(photo.id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { message?: string }
+        throw new Error(j.message || 'Usuwanie nie powiodło się.')
+      }
+      onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Błąd usuwania.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <article
       className="rounded-2xl border border-hairline bg-bg-card p-4"
@@ -497,13 +600,211 @@ function EntryCard({ entry }: { entry: JournalEntry }) {
           {meta.label}
         </span>
       </div>
+
+      {photos.length > 0 && (
+        <div className="mt-3">
+          <PhotoGallery photos={photos} onOpen={(i) => setLightboxIdx(i)} />
+        </div>
+      )}
+
       <h3 className="mt-3 font-serif text-[18px] leading-snug text-ink-primary">
         {entry.title}
       </h3>
       <p className="mt-2 text-[13.5px] leading-[1.55] text-ink-secondary">
         {entry.summary}
       </p>
+
+      {canEdit && (
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy || photos.length >= MAX_PHOTOS}
+            className="flex h-[28px] items-center gap-1.5 rounded-full border border-hairline px-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-secondary transition-colors hover:border-ink-tertiary disabled:opacity-40"
+            aria-label="Dodaj zdjęcie do wpisu"
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            {busy ? 'Wgrywam…' : `Dodaj zdjęcie (${photos.length}/${MAX_PHOTOS})`}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            multiple
+            onChange={(e) => handleFiles(e.target.files)}
+            className="hidden"
+          />
+        </div>
+      )}
+      {error && (
+        <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.14em] text-alert">
+          {error}
+        </div>
+      )}
+
+      {lightboxIdx !== null && (
+        <Lightbox
+          photos={photos}
+          startIndex={lightboxIdx}
+          canDelete={canEdit}
+          onClose={() => setLightboxIdx(null)}
+          onDelete={handleDelete}
+        />
+      )}
     </article>
+  )
+}
+
+function PhotoGallery({ photos, onOpen }: { photos: JournalPhoto[]; onOpen: (idx: number) => void }) {
+  const n = photos.length
+  if (n === 1) {
+    const p = photos[0]
+    return (
+      <button
+        type="button"
+        onClick={() => onOpen(0)}
+        className="block w-full overflow-hidden rounded-sm bg-bg-subtle"
+        style={{ aspectRatio: '4 / 3' }}
+      >
+        {p.signedUrl && <img src={p.signedUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
+      </button>
+    )
+  }
+  if (n === 2 || n === 3) {
+    return (
+      <div className={`grid gap-2 ${n === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {photos.map((p, i) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onOpen(i)}
+            className="overflow-hidden rounded-sm bg-bg-subtle"
+            style={{ aspectRatio: '1 / 1' }}
+          >
+            {p.signedUrl && <img src={p.signedUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
+          </button>
+        ))}
+      </div>
+    )
+  }
+  // 4+ → grid 2x2, 4. kafelek z overlay +N (przy >4)
+  const visible = photos.slice(0, 4)
+  const extra = n - 4
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {visible.map((p, i) => (
+        <button
+          key={p.id}
+          type="button"
+          onClick={() => onOpen(i)}
+          className="relative overflow-hidden rounded-sm bg-bg-subtle"
+          style={{ aspectRatio: '1 / 1' }}
+        >
+          {p.signedUrl && <img src={p.signedUrl} alt="" loading="lazy" className="h-full w-full object-cover" />}
+          {i === 3 && extra > 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-ink-primary/55 font-serif text-[22px] text-bg-base">
+              +{extra}
+            </div>
+          )}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Lightbox({
+  photos,
+  startIndex,
+  canDelete,
+  onClose,
+  onDelete,
+}: {
+  photos: JournalPhoto[]
+  startIndex: number
+  canDelete: boolean
+  onClose: () => void
+  onDelete: (p: JournalPhoto) => Promise<void>
+}) {
+  const [idx, setIdx] = useState(startIndex)
+  const safeIdx = Math.min(idx, photos.length - 1)
+  const photo = photos[safeIdx]
+
+  useEffect(() => {
+    if (photos.length === 0) onClose()
+  }, [photos.length, onClose])
+
+  if (!photo) return null
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-ink-primary/95" onClick={onClose}>
+      <div className="flex items-center justify-between px-4 pt-4 text-bg-base" onClick={(e) => e.stopPropagation()}>
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] opacity-70">
+          {safeIdx + 1} / {photos.length}
+        </span>
+        <div className="flex items-center gap-2">
+          {canDelete && (
+            <button
+              type="button"
+              onClick={async () => {
+                await onDelete(photo)
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-bg-base/30 hover:bg-bg-base/10"
+              aria-label="Usuń zdjęcie"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                <path d="M10 11v6M14 11v6" />
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-bg-base/30 hover:bg-bg-base/10"
+            aria-label="Zamknij"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-1 items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+        {photo.signedUrl && (
+          <img src={photo.signedUrl} alt="" className="max-h-full max-w-full object-contain" />
+        )}
+      </div>
+      {photos.length > 1 && (
+        <div className="flex items-center justify-between px-4 pb-6" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            onClick={() => setIdx((i) => (i - 1 + photos.length) % photos.length)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-bg-base/30 text-bg-base hover:bg-bg-base/10"
+            aria-label="Poprzednie"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIdx((i) => (i + 1) % photos.length)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-bg-base/30 text-bg-base hover:bg-bg-base/10"
+            aria-label="Następne"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 

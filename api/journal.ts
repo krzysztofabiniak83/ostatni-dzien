@@ -67,7 +67,7 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
 
   const { data, error } = await supabase
     .from('conversations')
-    .select('id,started_at,ended_at,category,title,summary,message_count')
+    .select('id,started_at,ended_at,category,title,summary,message_count,conversation_photos(id,storage_path,mime_type,width,height,position)')
     .eq('user_id', userId)
     .gte('started_at', fromIso)
     .lte('started_at', toIso)
@@ -79,16 +79,45 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
     return
   }
 
+  // Batch signed URLs (jeden round-trip na bucket).
+  const allPaths: string[] = []
+  for (const c of data ?? []) {
+    for (const p of (c as { conversation_photos?: Array<{ storage_path: string }> }).conversation_photos ?? []) {
+      allPaths.push(p.storage_path)
+    }
+  }
+  const pathToUrl = new Map<string, string>()
+  if (allPaths.length > 0) {
+    const { data: signed } = await supabase.storage.from('journal-photos').createSignedUrls(allPaths, 3600)
+    for (const s of signed ?? []) {
+      if (s.path && s.signedUrl) pathToUrl.set(s.path, s.signedUrl)
+    }
+  }
+
   res.status(200).json({
-    conversations: (data ?? []).map((c) => ({
-      id: c.id,
-      startedAt: c.started_at,
-      endedAt: c.ended_at,
-      category: c.category,
-      title: c.title,
-      summary: c.summary,
-      messageCount: c.message_count,
-    })),
+    conversations: (data ?? []).map((c) => {
+      const photos = ((c as { conversation_photos?: Array<{ id: string; storage_path: string; mime_type: string; width: number | null; height: number | null; position: number }> }).conversation_photos ?? [])
+        .slice()
+        .sort((a, b) => a.position - b.position)
+        .map((p) => ({
+          id: p.id,
+          signedUrl: pathToUrl.get(p.storage_path) ?? null,
+          mimeType: p.mime_type,
+          width: p.width,
+          height: p.height,
+          position: p.position,
+        }))
+      return {
+        id: c.id,
+        startedAt: c.started_at,
+        endedAt: c.ended_at,
+        category: c.category,
+        title: c.title,
+        summary: c.summary,
+        messageCount: c.message_count,
+        photos,
+      }
+    }),
   })
 }
 
