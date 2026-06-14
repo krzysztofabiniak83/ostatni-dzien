@@ -7,6 +7,7 @@ import {
   isCategoryId,
   type CategoryId,
 } from './_shared/categories.js'
+import { EMBED_MODEL, buildEmbedInput, embedQuery, toPgVector } from './_shared/embeddings.js'
 
 /**
  * Dzienniczek Rozmów — persystencja + odczyt.
@@ -59,7 +60,8 @@ async function handleGet(req: VercelRequest, res: VercelResponse) {
 
   const now = new Date()
   const defaultFrom = new Date(now)
-  defaultFrom.setDate(defaultFrom.getDate() - 60)
+  // Default: 3 lata wstecz, żeby UI dzienniczka mógł pokazać pełną historię.
+  defaultFrom.setFullYear(defaultFrom.getFullYear() - 3)
   const fromIso = (fromParam ? new Date(fromParam) : defaultFrom).toISOString()
   const toIso = (toParam ? new Date(toParam) : now).toISOString()
 
@@ -168,6 +170,18 @@ async function handlePost(req: VercelRequest, res: VercelResponse) {
   if (error) {
     res.status(500).json({ error: 'db_error', message: error.message })
     return
+  }
+
+  // Best-effort embedding — błąd nie blokuje zapisu rozmowy.
+  try {
+    const embedInput = buildEmbedInput({ title, summary, category, raw_messages: messages })
+    const vec = await embedQuery(embedInput)
+    await supabase
+      .from('conversations')
+      .update({ embed_input: embedInput, embed_model: EMBED_MODEL, embedding: toPgVector(vec) })
+      .eq('id', data.id)
+  } catch (err) {
+    console.error('[journal] embedding failed:', err)
   }
 
   res.status(200).json({

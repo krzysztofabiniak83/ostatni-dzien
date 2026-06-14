@@ -22,15 +22,24 @@ const PL_MONTHS = [
 const PL_WEEKDAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb']
 
 /**
- * Generuje listę 60 dni wstecz + dziś (najstarsze pierwsze).
+ * Generuje listę dni od `oldestIso` do dziś (najstarsze pierwsze).
  * Liczymy bezpośrednio w UTC, żeby nie złapać duplikatu/luki przy DST.
+ * Limit bezpieczeństwa: max 5 lat (≈1827 dni) — zapobiega obwisaniu DOM gdyby
+ * w bazie znalazła się jakaś dziwna data.
  */
-function buildDayWindow(): string[] {
+function buildDayWindow(oldestIso: string | null): string[] {
   const out: string[] = []
   const now = new Date()
   const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
   const DAY = 86_400_000
-  for (let i = 60; i >= 0; i--) {
+  const fallbackDays = 60
+  let totalDays = fallbackDays
+  if (oldestIso) {
+    const oldest = new Date(oldestIso + 'T00:00:00Z').getTime()
+    const diff = Math.floor((todayUtc - oldest) / DAY)
+    if (Number.isFinite(diff) && diff > 0) totalDays = Math.min(Math.max(diff, fallbackDays), 1827)
+  }
+  for (let i = totalDays; i >= 0; i--) {
     const iso = new Date(todayUtc - i * DAY).toISOString().slice(0, 10)
     out.push(iso)
   }
@@ -52,11 +61,16 @@ export function JournalView({
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(false)
   const grouped = useMemo(() => groupByDate(entries), [entries])
-  const days = useMemo(buildDayWindow, [])
   const daysWithEntries = useMemo(
     () => new Set(Object.keys(grouped)),
     [grouped],
   )
+  const oldestEntryDate = useMemo(() => {
+    let oldest: string | null = null
+    for (const d of daysWithEntries) if (!oldest || d < oldest) oldest = d
+    return oldest
+  }, [daysWithEntries])
+  const days = useMemo(() => buildDayWindow(oldestEntryDate), [oldestEntryDate])
 
   // Pobranie realnych konwersacji po otwarciu dzienniczka.
   useEffect(() => {
@@ -145,6 +159,23 @@ export function JournalView({
 
   const scrollerRef = useRef<HTMLDivElement>(null)
   const dayRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  const [edges, setEdges] = useState<{ left: boolean; right: boolean }>({ left: false, right: true })
+
+  /** Aktualizuje czy widać strzałki nawigacyjne kalendarza. */
+  function updateEdges() {
+    const el = scrollerRef.current
+    if (!el) return
+    const left = el.scrollLeft > 4
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4
+    setEdges((prev) => (prev.left === left && prev.right === right ? prev : { left, right }))
+  }
+
+  /** Przewija kalendarz o ~70% szerokości widoku w lewo/prawo. */
+  function scrollByPage(dir: -1 | 1) {
+    const el = scrollerRef.current
+    if (!el) return
+    el.scrollBy({ left: dir * Math.round(el.clientWidth * 0.7), behavior: 'smooth' })
+  }
   const snapTimerRef = useRef<number | null>(null)
   // Drag-to-scroll dla myszy (mobile ma natywny touch-scroll).
   const dragRef = useRef<{ down: boolean; startX: number; startScroll: number; moved: boolean }>({
@@ -180,12 +211,24 @@ export function JournalView({
       skipNextCenterRef.current = false
       return
     }
-    const id = window.requestAnimationFrame(() => centerDay(active, false))
+    const id = window.requestAnimationFrame(() => {
+      centerDay(active, false)
+      updateEdges()
+    })
     return () => window.cancelAnimationFrame(id)
   }, [open, active])
 
+  // Recompute edges on resize, gdy dzienniczek otwarty.
+  useEffect(() => {
+    if (!open) return
+    const onResize = () => updateEdges()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [open])
+
   /** Po scrollu — znajdź dzień najbliżej środka; jeśli pusty, snap-uj do najbliższego z wpisem. */
   function handleScroll() {
+    updateEdges()
     if (snapTimerRef.current) window.clearTimeout(snapTimerRef.current)
     snapTimerRef.current = window.setTimeout(() => {
       // Dopóki nie wiemy jaki ma być aktywny dzień (brak wpisów / przed sync)
@@ -289,7 +332,41 @@ export function JournalView({
           </div>
 
           {/* Kalendarz karuzelowy */}
-          <div className="border-b border-hairline pb-3">
+          <div className="relative border-b border-hairline pb-3">
+            {/* Strzałka w lewo */}
+            <button
+              type="button"
+              onClick={() => scrollByPage(-1)}
+              disabled={!edges.left}
+              aria-label="Wcześniejsze dni"
+              className={[
+                'absolute left-1 top-1/2 z-10 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full',
+                'border border-hairline bg-bg-base/90 backdrop-blur text-ink-secondary shadow-sm transition-all',
+                'hover:border-ink-tertiary hover:text-ink-primary',
+                edges.left ? 'opacity-100' : 'pointer-events-none opacity-0',
+              ].join(' ')}
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            {/* Strzałka w prawo */}
+            <button
+              type="button"
+              onClick={() => scrollByPage(1)}
+              disabled={!edges.right}
+              aria-label="Późniejsze dni"
+              className={[
+                'absolute right-1 top-1/2 z-10 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full',
+                'border border-hairline bg-bg-base/90 backdrop-blur text-ink-secondary shadow-sm transition-all',
+                'hover:border-ink-tertiary hover:text-ink-primary',
+                edges.right ? 'opacity-100' : 'pointer-events-none opacity-0',
+              ].join(' ')}
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
             <div
               ref={scrollerRef}
               onScroll={handleScroll}

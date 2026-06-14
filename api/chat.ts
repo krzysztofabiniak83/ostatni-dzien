@@ -6,6 +6,7 @@ import { checkAndIncrementDailyUsage } from './_shared/rate-limit.js'
 import { formatSubDate, sectionFor, urgencyFor } from './_shared/format.js'
 import { SYSTEM_PROMPT } from './_shared/prompt.js'
 import { CATEGORY_IDS, isCategoryId } from './_shared/categories.js'
+import { embedQuery, toPgVector } from './_shared/embeddings.js'
 
 /**
  * Subskrypcik — agent czatu.
@@ -172,11 +173,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     )
     .join('\n')
 
+  // Hybrydowy retrieval z dzienniczka + zawsze ostatnie 7 dni (best-effort).
+  let journalContext = ''
+  try {
+    const lastUserMsg = [...userMessages].reverse().find((m) => m.role === 'user')?.content?.trim() || ''
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString()
+
+    // 1. Twardy kontekst czasowy: ostatnie 7 dni rozmów (max 10).
+    const { data: recent } = await supabase
+      .from('conversations')
+      .select('id,started_at,category,title,summary')
+      .eq('user_id', userId)
+      .gte('started_at', sevenDaysAgo)
+      .order('started_at', { ascending: false })
+      .limit(10)
+
+    const recentIds = new Set((recent ?? []).map((r) => r.id))
+    const recentBlock = (recent ?? [])
+      .map((r) => `- ${(r.started_at || '').slice(0, 10)} · [${r.category}] ${r.title} — ${r.summary}`)
+      .join('\n')
+
+    // 2. Hybryda — top-6 odsiane do tych spoza ostatnich 7 dni (żeby nie dublować).
+    let hybridBlock = ''
+    if (lastUserMsg) {
+      const qVec = await embedQuery(lastUserMsg)
+      const { data: matches } = await supabase.rpc('match_conversations_hybrid', {
+        p_query: lastUserMsg,
+        p_query_embedding: toPgVector(qVec),
+        p_limit: 6,
+        p_recency_half_life_days: 365,
+      })
+      const MIN_SCORE = 0.005
+      const top = (matches ?? [])
+        .filter((m: { score: number; id: string }) => m.score > MIN_SCORE && !recentIds.has(m.id))
+      if (top.length > 0) {
+        hybridBlock = top
+          .map((m: { started_at: string; category: string; title: string; summary: string }) => {
+            return `- ${(m.started_at || '').slice(0, 10)} · [${m.category}] ${m.title} — ${m.summary}`
+          })
+          .join('\n')
+      }
+    }
+
+    const sections: string[] = []
+    if (recentBlock) sections.push(`Ostatnie 7 dni rozmów z dzienniczka:\n${recentBlock}`)
+    if (hybridBlock) sections.push(`Wcześniejsze rozmowy pasujące do pytania:\n${hybridBlock}`)
+    if (sections.length > 0) journalContext = '\n\n' + sections.join('\n\n')
+  } catch (err) {
+    console.error('[chat] journal retrieval failed:', err)
+  }
+
   const contextMessage = `Aktualna data: ${today}.
 Liczba aktywnych subskrypcji użytkownika: ${subs?.length ?? 0}.
 Suma miesięczna (z listy poniżej): **${totalPLN} zł**.
 Lista (snapshot, posortowana po najbliższym pobraniu):
-${listSnapshot || '(pusta)'}`
+${listSnapshot || '(pusta)'}${journalContext}
+
+Jeśli sekcja "Wcześniejsze rozmowy" zawiera wpisy odnoszące się do pytania, cytuj je krótko z datą. Nie zmyślaj historii, której tam nie ma.`
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: 'system', content: SYSTEM_PROMPT },
