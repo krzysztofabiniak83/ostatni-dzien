@@ -14,6 +14,7 @@ const SECTIONS: SectionRef[] = [
   { id: 'ask', label: 'Ask' },
   { id: 'read', label: 'Read' },
   { id: 'journal', label: 'Journal' },
+  { id: 'journal-photos', label: 'Journal photos' },
 ]
 
 export function ApiTab() {
@@ -257,10 +258,23 @@ export function ApiTab() {
       "category": "media_vod",
       "title": "Canal+ — brak informacji o cenach",
       "summary": "Subskrypcik nie znalazł aktualnego cennika Canal+...",
-      "messageCount": 8
+      "messageCount": 8,
+      "photos": [
+        {
+          "id": "02c1f0d4-2943-46e2-af76-30cddd59b0dd",
+          "signedUrl": "https://ehfrpymyshwvhkbskvsf.supabase.co/storage/v1/object/sign/journal-photos/...",
+          "mimeType": "image/jpeg",
+          "width": 1200,
+          "height": 900,
+          "position": 0
+        }
+      ]
     }
   ]
 }`}</Code>
+          <p className="mt-3 text-[13px] leading-relaxed text-ink-tertiary">
+            <InlineCode>signedUrl</InlineCode> wygasa po 1h. Odśwież listę żeby pobrać świeże URLe.
+          </p>
 
           <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
             Zapisz zamkniętą sesję
@@ -300,6 +314,106 @@ export function ApiTab() {
     "messageCount": 8
   }
 }`}</Code>
+        </section>
+
+        <section id="journal-photos" className="mb-24 scroll-mt-32">
+          <Eyebrow>API · Journal photos</Eyebrow>
+          <h2 className="mb-2 font-serif text-[28px] leading-tight text-ink-primary">
+            Zdjęcia do wpisów dzienniczka
+          </h2>
+          <p className="mb-6 text-[14.5px] leading-relaxed text-ink-secondary">
+            Każdy wpis dzienniczka (<InlineCode>conversation</InlineCode>) może mieć max 6 zdjęć.
+            Pliki trzymane w prywatnym bucketcie Supabase Storage{' '}
+            <InlineCode>journal-photos</InlineCode>; RLS po <InlineCode>user_id</InlineCode>.
+            Listing zdjęć dostajesz razem z <InlineCode>GET /api/journal</InlineCode> w polu{' '}
+            <InlineCode>photos[]</InlineCode> (z świeżymi signed URL).
+          </p>
+
+          <h3 className="mt-8 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Upload — 2 kroki
+          </h3>
+          <p className="mb-4 text-[13.5px] leading-relaxed text-ink-secondary">
+            1. Wgraj plik bezpośrednio do Storage z klienta (Supabase JS / REST). Ścieżka musi
+            zaczynać się od Twojego <InlineCode>user_id</InlineCode>:{' '}
+            <InlineCode>{`{user_id}/{conversation_id}/{photo_id}.{ext}`}</InlineCode>.<br />
+            2. Wywołaj endpoint poniżej żeby zapisać metadane (RLS sprawdzi że{' '}
+            <InlineCode>conversation_id</InlineCode> należy do Ciebie).
+          </p>
+
+          <EndpointHeader method="POST" path="/api/journal-photos" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Body</h4>
+          <div>
+            <ParamRow name="conversationId" type="uuid" required>
+              ID wpisu w dzienniczku.
+            </ParamRow>
+            <ParamRow name="storagePath" type="string" required>
+              Ścieżka pliku w bucketcie. Musi zaczynać się od Twojego user_id.
+            </ParamRow>
+            <ParamRow name="mimeType" type='"image/jpeg" | "image/png" | "image/webp" | "image/heic" | "image/heif"' required>
+              Typ pliku (whitelist).
+            </ParamRow>
+            <ParamRow name="sizeBytes" type="number" required>
+              Rozmiar w bajtach. Max 10 MB.
+            </ParamRow>
+            <ParamRow name="originalName" type="string">
+              Oryginalna nazwa pliku (opcjonalnie, do wyświetlenia).
+            </ParamRow>
+            <ParamRow name="width" type="number">
+              Szerokość px (opcjonalnie, do aspect-ratio).
+            </ParamRow>
+            <ParamRow name="height" type="number">
+              Wysokość px (opcjonalnie).
+            </ParamRow>
+          </div>
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl -X POST "https://ostatnidzien.app/api/journal-photos" \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "conversationId": "fbd953bf-23f0-456c-94ce-102570d74f04",
+    "storagePath": "5ede959c-.../fbd953bf-.../abc-photo.jpg",
+    "mimeType": "image/jpeg",
+    "sizeBytes": 245677
+  }'`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{
+  "photo": {
+    "id": "02c1f0d4-...",
+    "conversationId": "fbd953bf-...",
+    "storagePath": "5ede959c-.../fbd953bf-.../abc-photo.jpg",
+    "mimeType": "image/jpeg",
+    "sizeBytes": 245677,
+    "width": null,
+    "height": null,
+    "position": 2,
+    "createdAt": "2026-06-14T20:55:00.000Z",
+    "signedUrl": "https://...supabase.co/storage/v1/object/sign/journal-photos/..."
+  }
+}`}</Code>
+          <p className="mt-3 text-[13px] leading-relaxed text-ink-tertiary">
+            Błędy: <InlineCode>400</InlineCode> bad_mime / bad_size,{' '}
+            <InlineCode>403</InlineCode> bad_path (ścieżka poza Twoim folderem),{' '}
+            <InlineCode>409</InlineCode> limit_reached (max 6 zdjęć).
+          </p>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Usuń zdjęcie
+          </h3>
+          <p className="mb-4 text-[13px] text-ink-tertiary">
+            Kasuje rekord z bazy i plik ze Storage. RLS: tylko własne.
+          </p>
+          <EndpointHeader method="DELETE" path="/api/journal-photos" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Query</h4>
+          <div>
+            <ParamRow name="id" type="uuid" required>
+              ID rekordu zdjęcia.
+            </ParamRow>
+          </div>
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl -X DELETE "https://ostatnidzien.app/api/journal-photos?id=02c1f0d4-..." \\
+  -H "Authorization: Bearer $TOKEN"`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{ "ok": true }`}</Code>
         </section>
       </main>
     </div>

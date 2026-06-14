@@ -231,7 +231,7 @@ export function McpTab() {
 
           <ToolHeader
             name="list_journal_entries"
-            description="Pamięć długoterminowa agenta. Zwraca podsumowania zamkniętych konwersacji usera z Subskrypcikiem — kategoria, tytuł, 2–3 zdania wniosku, czas trwania."
+            description="Pamięć długoterminowa agenta. Zwraca podsumowania zamkniętych konwersacji usera z Subskrypcikiem — kategoria, tytuł, 2–3 zdania wniosku, czas trwania, liczba dołączonych zdjęć."
           />
           <div>
             <ParamRow name="from" type="ISO 8601 string">
@@ -263,7 +263,7 @@ export function McpTab() {
           <Code language="json">{`{
   "content": [{
     "type": "text",
-    "text": "{ \\"entries\\": [ { \\"id\\": \\"fbd953bf-...\\", \\"startedAt\\": \\"2026-06-12T18:30:00Z\\", \\"endedAt\\": \\"2026-06-12T18:42:00Z\\", \\"category\\": \\"media_vod\\", \\"title\\": \\"Canal+ — brak informacji o cenach\\", \\"summary\\": \\"...\\", \\"messageCount\\": 8 } ] }"
+    "text": "{ \\"entries\\": [ { \\"id\\": \\"fbd953bf-...\\", \\"startedAt\\": \\"2026-06-12T18:30:00Z\\", \\"endedAt\\": \\"2026-06-12T18:42:00Z\\", \\"category\\": \\"media_vod\\", \\"title\\": \\"Canal+ — brak informacji o cenach\\", \\"summary\\": \\"...\\", \\"messageCount\\": 8, \\"photoCount\\": 2 } ] }"
   }]
 }`}</Code>
 

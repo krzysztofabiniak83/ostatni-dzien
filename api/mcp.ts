@@ -176,7 +176,7 @@ const baseHandler = createMcpHandler(
 
     server.tool(
       'list_journal_entries',
-      'Zwraca dzienniczek rozmów zalogowanego użytkownika z agentem-Subskrypcikiem (tytuł, podsumowanie 2-3 zdania, kategoria, czas trwania). Użyj gdy potrzebujesz długoterminowej pamięci: "o czym rozmawialiśmy w zeszłym tygodniu", "co zdecydowaliśmy z Netflixem". Domyślnie ostatnie 60 dni, max 100 wpisów, sort malejąco po dacie.',
+      'Zwraca dzienniczek rozmów zalogowanego użytkownika z agentem-Subskrypcikiem (tytuł, podsumowanie 2-3 zdania, kategoria, czas trwania, liczba dołączonych zdjęć). Użyj gdy potrzebujesz długoterminowej pamięci: "o czym rozmawialiśmy w zeszłym tygodniu", "co zdecydowaliśmy z Netflixem". Domyślnie ostatnie 60 dni, max 100 wpisów, sort malejąco po dacie.',
       {
         from: z
           .string()
@@ -201,7 +201,7 @@ const baseHandler = createMcpHandler(
 
           let query = supabase
             .from('conversations')
-            .select('id,started_at,ended_at,category,title,summary,message_count')
+            .select('id,started_at,ended_at,category,title,summary,message_count,conversation_photos(id)')
             .eq('user_id', userId)
             .gte('started_at', fromIso)
             .lte('started_at', toIso)
@@ -220,6 +220,7 @@ const baseHandler = createMcpHandler(
               title: c.title,
               summary: c.summary,
               messageCount: c.message_count,
+              photoCount: ((c as { conversation_photos?: unknown[] }).conversation_photos ?? []).length,
             })),
           })
         })
