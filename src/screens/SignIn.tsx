@@ -55,6 +55,19 @@ export function SignIn() {
     setInfo(null)
   }
 
+  async function loginAsDemo() {
+    setBusy(true)
+    setError(null)
+    setInfo(null)
+    try {
+      await signInWithPassword('demo@ostatni-dzien.app', 'DemoTest2026!')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nie udało się otworzyć dema.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="flex h-full w-full flex-col bg-bg-base px-6 pt-16 pb-8">
       <div className="flex-1">
@@ -144,6 +157,29 @@ export function SignIn() {
         >
           {isSignup ? 'Masz już konto? Zaloguj się' : 'Nie masz konta? Załóż je teraz'}
         </button>
+
+        <div className="mt-10 flex items-center gap-3">
+          <div className="h-px flex-1 bg-hairline" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
+            lub
+          </span>
+          <div className="h-px flex-1 bg-hairline" />
+        </div>
+
+        <button
+          type="button"
+          onClick={loginAsDemo}
+          disabled={busy}
+          className="mt-6 flex h-[48px] w-full items-center justify-center gap-2 rounded-md border border-hairline bg-bg-card font-sans text-[14px] font-medium text-ink-primary transition-all duration-150 hover:border-accent hover:bg-accent-soft hover:text-accent active:scale-[0.98] disabled:opacity-50"
+        >
+          <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+          </svg>
+          Testuj aplikację (bez zakładania konta)
+        </button>
+        <p className="mt-2 text-center text-[11px] leading-relaxed text-ink-tertiary">
+          Wpuszcza Cię od razu na konto demo z przykładowymi danymi.
+        </p>
       </div>
 
       <p className="text-center font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
