@@ -32,13 +32,17 @@ export function Eyebrow({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function MethodBadge({ method }: { method: 'GET' | 'POST' | 'PATCH' }) {
+type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE'
+
+export function MethodBadge({ method }: { method: HttpMethod }) {
   const color =
     method === 'GET'
       ? 'bg-accent-soft text-accent'
       : method === 'POST'
         ? 'bg-[#E8EEEB] text-accent'
-        : 'bg-alert-soft text-alert'
+        : method === 'DELETE'
+          ? 'bg-alert-soft text-alert'
+          : 'bg-alert-soft text-alert'
   return (
     <span
       className={`inline-flex items-center rounded-sm px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.08em] ${color}`}
@@ -106,7 +110,7 @@ export function EndpointHeader({
   method,
   path,
 }: {
-  method: 'GET' | 'POST' | 'PATCH'
+  method: HttpMethod
   path: string
 }) {
   return (
