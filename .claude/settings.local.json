@@ -33,7 +33,9 @@
       "mcp__73977f6b-96b7-47a1-bcc1-a00c0a55c5e7__get_deployment_build_logs",
       "Bash(git commit *)",
       "Bash(curl -sSI https://ostatni-dzien.vercel.app/subskrypcik-avatar.png)",
-      "mcp__4ffbf63c-a918-48af-ab2d-7685a64ccdb4__execute_sql"
+      "mcp__4ffbf63c-a918-48af-ab2d-7685a64ccdb4__execute_sql",
+      "mcp__4ffbf63c-a918-48af-ab2d-7685a64ccdb4__list_extensions",
+      "mcp__73977f6b-96b7-47a1-bcc1-a00c0a55c5e7__list_deployments"
     ]
   }
 }

@@ -643,19 +643,23 @@ function EntryCard({
       </p>
 
       {canEdit && (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-4">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={busy || photos.length >= MAX_PHOTOS}
-            className="flex h-[28px] items-center gap-1.5 rounded-full border border-hairline px-2.5 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-secondary transition-colors hover:border-ink-tertiary disabled:opacity-40"
-            aria-label="Dodaj zdjęcie do wpisu"
+            className="flex h-[44px] w-full items-center justify-center gap-2 rounded-md border border-dashed border-hairline bg-bg-subtle/40 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-secondary transition-colors hover:border-ink-tertiary hover:text-ink-primary disabled:opacity-40"
+            aria-label="Dodaj zdjęcie do podsumowania"
           >
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
               <circle cx="12" cy="13" r="4" />
             </svg>
-            {busy ? 'Wgrywam…' : `Dodaj zdjęcie (${photos.length}/${MAX_PHOTOS})`}
+            {busy
+              ? 'Wgrywam…'
+              : photos.length >= MAX_PHOTOS
+                ? `Limit ${MAX_PHOTOS} zdjęć`
+                : `Dodaj zdjęcie do podsumowania (${photos.length}/${MAX_PHOTOS})`}
           </button>
           <input
             ref={fileInputRef}
