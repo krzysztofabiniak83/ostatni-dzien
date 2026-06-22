@@ -47,7 +47,7 @@ export function PersonaDropdown() {
       >
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
-            AI Doradca
+            Wybierz doradcę AI
           </div>
           <div className="flex items-center gap-1.5 font-serif text-[22px] leading-tight text-ink-primary">
             <span>{active?.name ?? 'Subskrypcik'}</span>

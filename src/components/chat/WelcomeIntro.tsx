@@ -93,8 +93,9 @@ export function WelcomeIntro() {
 
   const personaId = active?.id ?? 'subskrypcik'
   const personaName = active?.name ?? 'Subskrypcik'
-  const personaDescription =
-    active?.description ??
+  const personaWelcome =
+    active?.welcome_text ||
+    active?.description ||
     'Pomogę Ci ogarnąć subskrypcje: porównać plany, anulować zbędne usługi i znaleźć ukryte koszty.'
   const personaAccent = active?.accent_color ?? '#1F3D33'
   const personaEmoji = active?.avatar_emoji ?? '💸'
@@ -211,7 +212,7 @@ export function WelcomeIntro() {
         <h2 className="mb-2 font-serif text-[26px] leading-tight text-ink-primary">
           Cześć, jestem <span className="italic" style={{ color: personaAccent }}>{personaName}</span>
         </h2>
-        <p className="text-[14px] leading-[1.5] text-ink-secondary">{personaDescription}</p>
+        <p className="text-[14px] leading-[1.5] text-ink-secondary">{personaWelcome}</p>
         <p className="mt-3 text-[12px] text-ink-tertiary">
           Wybierz jedno z pytań poniżej albo zapytaj wprost.
         </p>

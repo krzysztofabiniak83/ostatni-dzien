@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     supabase
       .from('personas')
       .select(
-        'id,name,tagline,description,avatar_emoji,accent_color,price_pln_grosze,is_free,sort_order,is_active',
+        'id,name,tagline,description,welcome_text,avatar_emoji,accent_color,price_pln_grosze,is_free,sort_order,is_active',
       )
       .eq('is_active', true)
       .order('sort_order', { ascending: true }),

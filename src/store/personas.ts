@@ -6,6 +6,8 @@ export interface PersonaPublic {
   name: string
   tagline: string
   description: string
+  /** Pełne powitanie w pierwszej osobie, w tonie persony — używane w WelcomeIntro. */
+  welcome_text: string
   avatar_emoji: string
   accent_color: string
   price_pln_grosze: number
