@@ -4,7 +4,7 @@ import { MARKET, type MarketEntry } from './_market.js'
 import { getUserFromRequest } from './_shared/auth.js'
 import { checkAndIncrementDailyUsage } from './_shared/rate-limit.js'
 import { formatSubDate, sectionFor, urgencyFor } from './_shared/format.js'
-import { SYSTEM_PROMPT } from './_shared/prompt.js'
+import { getActiveSystemPrompt } from './_shared/personas.js'
 import { CATEGORY_IDS, isCategoryId } from './_shared/categories.js'
 import { embedQuery, toPgVector } from './_shared/embeddings.js'
 
@@ -155,6 +155,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const today = new Date().toISOString().slice(0, 10)
 
+  const { personaId, prompt: systemPrompt } = await getActiveSystemPrompt(supabase, userId)
+  console.log(`[chat] persona=${personaId}`)
+
   // Pre-fetch listy do system message (oszczędza tool call na 80% pytań).
   const { data: subs } = await supabase
     .from('subscriptions')
@@ -232,7 +235,7 @@ ${listSnapshot || '(pusta)'}${journalContext}
 Jeśli sekcja "Wcześniejsze rozmowy" zawiera wpisy odnoszące się do pytania, cytuj je krótko z datą. Nie zmyślaj historii, której tam nie ma.`
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
     { role: 'system', content: contextMessage },
     ...userMessages,
   ]

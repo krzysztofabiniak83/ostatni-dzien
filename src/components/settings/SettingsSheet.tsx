@@ -4,13 +4,14 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
-import { LifeBuoy, LogOut, Mail, MessageSquare } from 'lucide-react'
+import { LifeBuoy, LogOut, Mail, MessageSquare, Sparkles } from 'lucide-react'
 import { signOut } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import { Toggle } from '../ui/Toggle'
 import { MessageSheet } from './MessageSheet'
 import { useSettings, type Currency, type ReminderDays } from '../../store/settings'
 import { useOnboarding } from '../../store/onboarding'
+import { usePersonas } from '../../store/personas'
 
 interface SettingsSheetProps {
   open: boolean
@@ -126,6 +127,9 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   const navigate = useNavigate()
   const { notify, reminderDays, currency, setNotify, setReminderDays, setCurrency } = useSettings()
   const resetOnboarding = useOnboarding((s) => s.reset)
+  const personas = usePersonas((s) => s.personas)
+  const activePersonaId = usePersonas((s) => s.activePersonaId)
+  const activePersona = personas.find((p) => p.id === activePersonaId)
   const [messageOpen, setMessageOpen] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -236,6 +240,37 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                       ]}
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Sekcja 1.5: Doradca */}
+              <div className="mb-6">
+                <SectionLabel>AI Doradca</SectionLabel>
+                <div className="flex flex-col overflow-hidden rounded-lg border border-hairline bg-bg-card">
+                  <div className="flex items-center gap-3 border-b border-hairline px-5 py-4">
+                    <div
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[18px]"
+                      style={{ backgroundColor: (activePersona?.accent_color ?? '#1F3D33') + '20' }}
+                    >
+                      {activePersona?.avatar_emoji ?? '💸'}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-[14px] text-ink-primary">
+                        {activePersona?.name ?? 'Subskrypcik'}
+                      </div>
+                      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-tertiary">
+                        Aktywny doradca
+                      </div>
+                    </div>
+                  </div>
+                  <NavRow
+                    label="Sklep doradców"
+                    onClick={() => {
+                      onClose()
+                      navigate('/store')
+                    }}
+                    icon={Sparkles}
+                  />
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ import { Action } from './screens/Action'
 import { Onboarding } from './screens/Onboarding'
 import { Docs } from './screens/Docs'
 import { SignIn } from './screens/SignIn'
+import { Store } from './screens/Store'
 import { useOnboarding } from './store/onboarding'
 import { useAuth } from './lib/auth'
 import { AuthGate } from './components/AuthGate'
@@ -38,6 +39,7 @@ function AnimatedRoutes() {
             element={onboardingDone ? <Navigate to="/" replace /> : <Onboarding />}
           />
           <Route path="/sub/:id" element={<Action />} />
+          <Route path="/store" element={<Store />} />
         </Routes>
       </motion.div>
     </AnimatePresence>

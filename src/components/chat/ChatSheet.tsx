@@ -8,6 +8,7 @@ import { WelcomeIntro } from './WelcomeIntro'
 import { JournalView } from './JournalView'
 import { supabase } from '../../lib/supabase'
 import { useSubscriptions } from '../../store/subscriptions'
+import { PersonaDropdown } from '../personas/PersonaDropdown'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -209,14 +210,7 @@ export function ChatSheet({
 
             {/* Header */}
             <div className="flex items-center justify-between px-5 pb-3">
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">
-                  AI Doradca
-                </div>
-                <div className="font-serif text-[22px] leading-tight text-ink-primary">
-                  Subskrypcik
-                </div>
-              </div>
+              <PersonaDropdown />
               <div className="flex items-center gap-2">
                 <button
                   aria-label="Otwórz dzienniczek rozmów"

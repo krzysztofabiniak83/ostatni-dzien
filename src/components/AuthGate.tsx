@@ -3,6 +3,7 @@ import { useSubscriptions } from '../store/subscriptions'
 import { useSettings } from '../store/settings'
 import { useNotifications } from '../store/notifications'
 import { useOnboarding } from '../store/onboarding'
+import { usePersonas } from '../store/personas'
 import { supabase } from '../lib/supabase'
 import { subToRow } from '../lib/mappers'
 import type { Subscription } from '../types/subscription'
@@ -90,6 +91,7 @@ export function AuthGate({ userId, children, fallback }: Props) {
         useSettings.getState().loadFromRemote(userId),
         useNotifications.getState().loadFromRemote(userId),
         useOnboarding.getState().loadFromRemote(userId),
+        usePersonas.getState().load(),
       ])
       if (!cancelled) setReadyFor(userId)
     })()

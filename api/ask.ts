@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import OpenAI from 'openai'
 import { getUserFromRequest } from './_shared/auth.js'
 import { checkAndIncrementDailyUsage } from './_shared/rate-limit.js'
-import { SYSTEM_PROMPT } from './_shared/prompt.js'
+import { getActiveSystemPrompt } from './_shared/personas.js'
 
 const MODEL = process.env.SUBSKRYPCIK_MODEL || 'gpt-4o-mini'
 
@@ -47,8 +47,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const today = new Date().toISOString().slice(0, 10)
+  const { personaId, prompt: systemPrompt } = await getActiveSystemPrompt(supabase, userId)
+  console.log(`[ask] persona=${personaId}`)
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
   ]
 
   if (body.includeSubscriptions) {
