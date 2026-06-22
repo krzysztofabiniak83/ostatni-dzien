@@ -1,15 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import { siNetflix, siSpotify, siApple, siNotion, siYoutube, siAudible, siDuolingo, siFigma } from 'simple-icons'
+import { usePersonas } from '../../store/personas'
 
 /**
- * Powitalny ekran Subskrypcika — empty state w ChatSheet zanim padnie pierwsze pytanie.
+ * Powitalny ekran doradcy — empty state w ChatSheet zanim padnie pierwsze pytanie.
  *
- * - Środek: awatar Subskrypcika (zdjęcie /subskrypcik-avatar.png z fallbackiem
- *   do italic "S" w Fraunces na zielonym tle).
- * - Tło: 2 orbity z logo popularnych usług, krążące blisko awatara (nie nachodzą
- *   na tekst poniżej). Logo: 50% opacity, kontr-obrót żeby stały prosto.
- * - prefers-reduced-motion: animacje wyłączone.
+ * Zawartość jest data-driven z aktywnej persony (`usePersonas`):
+ * - Awatar: spróbuje załadować `/persona-avatar-{id}.png` (Subskrypcik ma legacy
+ *   ścieżkę `/subskrypcik-avatar.png`). Jeśli plik nie istnieje (np. nowa persona
+ *   bez wgranego renderu 3D) → fallback do dużego emoji z `personas.avatar_emoji`
+ *   na tle koloru akcentu danej persony.
+ * - Tytuł, opis, akcent: bezpośrednio z DB.
+ * - Orbity z logami marek pozostają niezależnie od persony — to ogólny mood
+ *   "subskrypcje" pasujący do każdego doradcy.
+ *
+ * prefers-reduced-motion: animacje wyłączone.
  */
 
 type Brand = { icon: { path: string }; bg: string; fg: string }
@@ -73,9 +79,31 @@ function OrbitItem({
 
 const AVATAR_SIZE = 96
 
+/** Zwraca ścieżkę do obrazka awatara per persona. Subskrypcik ma legacy nazwę. */
+function avatarSrcFor(personaId: string): string {
+  if (personaId === 'subskrypcik') return '/subskrypcik-avatar.png'
+  return `/persona-avatar-${personaId}.png`
+}
+
 export function WelcomeIntro() {
   const reduce = useReducedMotion()
+  const personas = usePersonas((s) => s.personas)
+  const activePersonaId = usePersonas((s) => s.activePersonaId)
+  const active = personas.find((p) => p.id === activePersonaId)
+
+  const personaId = active?.id ?? 'subskrypcik'
+  const personaName = active?.name ?? 'Subskrypcik'
+  const personaDescription =
+    active?.description ??
+    'Pomogę Ci ogarnąć subskrypcje: porównać plany, anulować zbędne usługi i znaleźć ukryte koszty.'
+  const personaAccent = active?.accent_color ?? '#1F3D33'
+  const personaEmoji = active?.avatar_emoji ?? '💸'
+
+  // Reset fallbacku przy zmianie persony — żeby drugi awatar miał szansę się załadować.
   const [imgFailed, setImgFailed] = useState(false)
+  useEffect(() => {
+    setImgFailed(false)
+  }, [personaId])
 
   // 2 orbity — kompaktowe, mieszczą się w całości w sheet.
   // Avatar promień = 48. Orbity: 70 i 92 (mogą lekko nachodzić na tekst).
@@ -149,38 +177,41 @@ export function WelcomeIntro() {
           </div>
         </div>
 
-        {/* Avatar Subskrypcika — obrazek z fallbackiem do "S" */}
+        {/* Awatar aktywnej persony — PNG z fallbackiem do dużego emoji na tle akcentu. */}
         <div
-          className="relative z-10 flex items-center justify-center overflow-hidden rounded-full bg-accent text-bg-base"
+          className="relative z-10 flex items-center justify-center overflow-hidden rounded-full text-bg-base"
           style={{
             width: AVATAR_SIZE,
             height: AVATAR_SIZE,
-            boxShadow: '0 16px 40px -10px rgba(31,61,51,0.4), 0 0 0 4px rgba(245,243,238,0.9)',
+            background: personaAccent,
+            boxShadow: `0 16px 40px -10px ${personaAccent}66, 0 0 0 4px rgba(245,243,238,0.9)`,
           }}
         >
           {!imgFailed ? (
             <img
-              src="/subskrypcik-avatar.png"
-              alt="Subskrypcik"
+              src={avatarSrcFor(personaId)}
+              alt={personaName}
               className="h-full w-full object-cover"
               onError={() => setImgFailed(true)}
             />
           ) : (
-            <span className="font-serif text-[60px] italic leading-none" style={{ marginTop: -4 }}>
-              S
+            <span
+              className="leading-none"
+              style={{ fontSize: 56, filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.25))' }}
+              aria-label={personaName}
+            >
+              {personaEmoji}
             </span>
           )}
         </div>
       </div>
 
-      {/* Tekst powitalny */}
+      {/* Tekst powitalny — kolor i treść z aktywnej persony. */}
       <div className="relative z-10 max-w-[300px]">
         <h2 className="mb-2 font-serif text-[26px] leading-tight text-ink-primary">
-          Cześć, jestem <span className="italic text-accent">Subskrypcik</span>
+          Cześć, jestem <span className="italic" style={{ color: personaAccent }}>{personaName}</span>
         </h2>
-        <p className="text-[14px] leading-[1.5] text-ink-secondary">
-          Pomogę Ci ogarnąć subskrypcje: porównać plany, anulować zbędne usługi i znaleźć ukryte koszty. Prowadzę też dzienniczek z kalendarzem oraz krótkimi podsumowaniami naszych rozmów i Twoich zapytań.
-        </p>
+        <p className="text-[14px] leading-[1.5] text-ink-secondary">{personaDescription}</p>
         <p className="mt-3 text-[12px] text-ink-tertiary">
           Wybierz jedno z pytań poniżej albo zapytaj wprost.
         </p>
