@@ -415,6 +415,102 @@ export function ApiTab() {
           <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
           <Code language="json">{`{ "ok": true }`}</Code>
         </section>
+
+        <section id="personas" className="mb-24 scroll-mt-32">
+          <Eyebrow>API · Marketplace</Eyebrow>
+          <h2 className="mb-2 font-serif text-[28px] leading-tight text-ink-primary">
+            Doradcy AI (persony)
+          </h2>
+          <p className="mb-6 text-[14.5px] leading-relaxed text-ink-secondary">
+            Płatny katalog doradców AI. Każdy user dostaje przy rejestracji darmowego{' '}
+            <InlineCode>subskrypcik</InlineCode>; dodatkowe persony (np.{' '}
+            <InlineCode>mecenas</InlineCode>, <InlineCode>ziomek</InlineCode>) odblokowują
+            się jednorazową płatnością przez Stripe Payment Link. Aktywna persona steruje
+            tonem i specjalizacją odpowiedzi w <InlineCode>/api/chat</InlineCode> i{' '}
+            <InlineCode>/api/ask</InlineCode>. System prompts są chronione kolumnowym RLS —
+            nie są zwracane do klienta.
+          </p>
+
+          <h3 className="mt-8 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Pobierz katalog + stan usera
+          </h3>
+          <EndpointHeader method="GET" path="/api/personas" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl https://ostatnidzien.app/api/personas \\
+  -H "Authorization: Bearer $TOKEN"`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{
+  "personas": [
+    { "id": "subskrypcik", "name": "Subskrypcik", "tagline": "Twój doradca subskrypcji",
+      "description": "...", "welcome_text": "...", "avatar_emoji": "💸",
+      "accent_color": "#1F3D33", "price_pln_grosze": 0, "is_free": true,
+      "sort_order": 10, "is_active": true },
+    { "id": "mecenas", "name": "Mecenas", "tagline": "Prawnik od umów subskrypcyjnych",
+      "price_pln_grosze": 500, "is_free": false, "sort_order": 20, "is_active": true }
+  ],
+  "owned": ["subskrypcik", "mecenas"],
+  "active": "mecenas"
+}`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Zmień aktywną personę
+          </h3>
+          <p className="mb-4 text-[13px] text-ink-tertiary">
+            Wymaga że user ma personę w <InlineCode>user_personas</InlineCode>. Próba aktywacji
+            niezakupionej persony zwraca <InlineCode>403 not_owned</InlineCode>.
+          </p>
+          <EndpointHeader method="POST" path="/api/personas/activate" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Body</h4>
+          <div>
+            <ParamRow name="personaId" type="string" required>
+              Id persony do aktywacji, np. <InlineCode>mecenas</InlineCode>.
+            </ParamRow>
+          </div>
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Przykład</h4>
+          <Code language="curl">{`curl -X POST https://ostatnidzien.app/api/personas/activate \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"personaId":"mecenas"}'`}</Code>
+          <h4 className="mt-2 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{ "activePersonaId": "mecenas" }`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Rozpocznij zakup persony
+          </h3>
+          <p className="mb-4 text-[13px] text-ink-tertiary">
+            Zwraca URL Stripe Payment Linka wzbogacony o{' '}
+            <InlineCode>client_reference_id=userId__personaId</InlineCode>. Frontend
+            redirektuje pod ten URL. Po pomyślnej płatności Stripe wyśle{' '}
+            <InlineCode>checkout.session.completed</InlineCode> na webhook, który wpisze
+            entitlement do <InlineCode>user_personas</InlineCode> (źródło prawdy o
+            dostępie). Brak Stripe linka w DB → <InlineCode>503 not_for_sale_yet</InlineCode>,
+            persona darmowa → <InlineCode>400 free_persona</InlineCode>.
+          </p>
+          <EndpointHeader method="POST" path="/api/personas/checkout" />
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Body</h4>
+          <div>
+            <ParamRow name="personaId" type="string" required>
+              Id persony do kupienia.
+            </ParamRow>
+          </div>
+          <h4 className="mt-6 mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-tertiary">Odpowiedź — 200</h4>
+          <Code language="json">{`{
+  "url": "https://buy.stripe.com/test_...?client_reference_id=<userId>__<personaId>&prefilled_email=..."
+}`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            Webhook Stripe (wewnętrzny)
+          </h3>
+          <p className="mb-2 text-[13px] text-ink-tertiary">
+            <InlineCode>POST /api/webhooks/stripe</InlineCode> — endpoint słucha{' '}
+            <InlineCode>checkout.session.completed</InlineCode>, weryfikuje podpis przez{' '}
+            <InlineCode>STRIPE_WEBHOOK_SECRET</InlineCode>, parsuje{' '}
+            <InlineCode>client_reference_id</InlineCode> (format{' '}
+            <InlineCode>userId__personaId</InlineCode>) i upsertuje entitlement z idempotencją
+            po <InlineCode>stripe_checkout_session_id</InlineCode>. Nie wystawiamy go jako
+            publicznego API — Stripe pinguje to bezpośrednio.
+          </p>
+        </section>
       </main>
     </div>
   )

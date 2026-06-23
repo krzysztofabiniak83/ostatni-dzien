@@ -226,6 +226,103 @@ const baseHandler = createMcpHandler(
         })
       },
     )
+
+    server.tool(
+      'list_personas',
+      'Zwraca katalog doradców AI (person) dostępnych w aplikacji wraz z informacją które z nich zalogowany user już posiada i która jest obecnie aktywna. Pole `system_prompt` nie jest zwracane — to chroniona własność intelektualna płatnych person.',
+      {},
+      async (_args, extra) => {
+        return withAuthCtx(extra.authInfo?.token, async ({ supabase, userId }) => {
+          const [personasRes, ownedRes, settingsRes] = await Promise.all([
+            supabase
+              .from('personas')
+              .select('id,name,tagline,description,price_pln_grosze,is_free,sort_order')
+              .eq('is_active', true)
+              .order('sort_order', { ascending: true }),
+            supabase.from('user_personas').select('persona_id').eq('user_id', userId),
+            supabase
+              .from('user_settings')
+              .select('active_persona_id')
+              .eq('user_id', userId)
+              .maybeSingle(),
+          ])
+          if (personasRes.error) return fail(`db_error: ${personasRes.error.message}`)
+          const owned = new Set((ownedRes.data ?? []).map((r) => r.persona_id))
+          const active = settingsRes.data?.active_persona_id ?? 'subskrypcik'
+          return ok({
+            personas: (personasRes.data ?? []).map((p) => ({
+              id: p.id,
+              name: p.name,
+              tagline: p.tagline,
+              description: p.description,
+              pricePLN: p.price_pln_grosze / 100,
+              isFree: p.is_free,
+              owned: owned.has(p.id),
+              active: p.id === active,
+            })),
+            activePersonaId: active,
+          })
+        })
+      },
+    )
+
+    server.tool(
+      'get_active_persona',
+      'Zwraca id aktywnej persony usera oraz krótkie metadane (nazwa, tagline). System prompt nie jest zwracany — chroniona własność intelektualna.',
+      {},
+      async (_args, extra) => {
+        return withAuthCtx(extra.authInfo?.token, async ({ supabase, userId }) => {
+          const { data: settings } = await supabase
+            .from('user_settings')
+            .select('active_persona_id')
+            .eq('user_id', userId)
+            .maybeSingle()
+          const id = settings?.active_persona_id ?? 'subskrypcik'
+          const { data: p, error } = await supabase
+            .from('personas')
+            .select('id,name,tagline')
+            .eq('id', id)
+            .maybeSingle()
+          if (error) return fail(`db_error: ${error.message}`)
+          return ok({ activePersona: p ?? { id, name: 'Subskrypcik', tagline: '' } })
+        })
+      },
+    )
+
+    server.tool(
+      'change_active_persona',
+      'Zmienia aktywnego doradcę AI zalogowanego usera. Wymaga aby user posiadał wybraną personę (free albo kupioną). Zwraca 403 jeśli brak entitlementu. Tool nie inicjuje zakupów — do zakupu user musi przejść przez UI (Stripe Payment Link).',
+      {
+        personaId: z
+          .string()
+          .min(1)
+          .describe('id persony, np. "subskrypcik", "mecenas", "ziomek".'),
+      },
+      async ({ personaId }, extra) => {
+        return withAuthCtx(extra.authInfo?.token, async ({ supabase, userId }) => {
+          const { data: entitlement } = await supabase
+            .from('user_personas')
+            .select('persona_id')
+            .eq('persona_id', personaId)
+            .maybeSingle()
+          if (!entitlement) {
+            return fail(`not_owned: User nie ma odblokowanej persony "${personaId}".`)
+          }
+          const { error } = await supabase
+            .from('user_settings')
+            .upsert(
+              {
+                user_id: userId,
+                active_persona_id: personaId,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id' },
+            )
+          if (error) return fail(`db_error: ${error.message}`)
+          return ok({ activePersonaId: personaId })
+        })
+      },
+    )
   },
   {
     serverInfo: { name: 'ostatni-dzien', version: '0.1.0' },

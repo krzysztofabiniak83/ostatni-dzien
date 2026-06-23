@@ -268,6 +268,42 @@ export function McpTab() {
 }`}</Code>
 
           <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            list_personas
+          </h3>
+          <p className="mb-3 text-[14px] leading-relaxed text-ink-secondary">
+            Zwraca katalog doradców AI z informacją które user posiada i która jest aktywna.
+            <InlineCode>system_prompt</InlineCode> nie jest zwracany — chroniona własność.
+          </p>
+          <Code language="json">{`{
+  "name": "list_personas",
+  "arguments": {}
+}`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            get_active_persona
+          </h3>
+          <p className="mb-3 text-[14px] leading-relaxed text-ink-secondary">
+            Krótki status: id + nazwa + tagline aktywnej persony usera.
+          </p>
+          <Code language="json">{`{
+  "name": "get_active_persona",
+  "arguments": {}
+}`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
+            change_active_persona
+          </h3>
+          <p className="mb-3 text-[14px] leading-relaxed text-ink-secondary">
+            Przełącza aktywnego doradcę. Wymaga że user posiada personę
+            (free albo kupioną). Brak entitlementu → <InlineCode>not_owned</InlineCode>.
+            Tool nie inicjuje zakupów — do tego user musi przejść przez UI.
+          </p>
+          <Code language="json">{`{
+  "name": "change_active_persona",
+  "arguments": { "personaId": "mecenas" }
+}`}</Code>
+
+          <h3 className="mt-10 mb-3 font-sans text-[18px] font-semibold text-ink-primary">
             Błędy
           </h3>
           <ul className="space-y-2 text-[14px] leading-relaxed text-ink-secondary">
