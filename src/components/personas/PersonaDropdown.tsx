@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import { usePersonas, type PersonaPublic } from '../../store/personas'
+import { PersonaAvatar } from './PersonaAvatar'
 
 const EASE = [0.32, 0.72, 0, 1] as const
 
@@ -133,12 +134,7 @@ function PersonaRow({ persona, isOwned, isActive, isBuying, onActivate, onBuy }:
           !isOwned && 'opacity-60',
         )}
       >
-        <div
-          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-[18px]"
-          style={{ backgroundColor: persona.accent_color + '20' }}
-        >
-          {persona.avatar_emoji}
-        </div>
+        <PersonaAvatar persona={persona} size={36} />
         <button
           type="button"
           disabled={!canActivate}

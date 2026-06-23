@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import clsx from 'clsx'
 import { usePersonas, type PersonaPublic } from '../store/personas'
+import { PersonaAvatar } from '../components/personas/PersonaAvatar'
 
 function formatPrice(grosze: number): string {
   if (grosze <= 0) return 'darmowe'
@@ -133,12 +134,7 @@ function PersonaCard({ persona, isOwned, isActive, isBuying, onActivate, onBuy }
       )}
     >
       <div className="flex items-start gap-3">
-        <div
-          className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-[24px]"
-          style={{ backgroundColor: persona.accent_color + '20' }}
-        >
-          {persona.avatar_emoji}
-        </div>
+        <PersonaAvatar persona={persona} size={48} />
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <div className="font-serif text-[18px] leading-tight text-ink-primary">
@@ -159,7 +155,7 @@ function PersonaCard({ persona, isOwned, isActive, isBuying, onActivate, onBuy }
             {persona.tagline}
           </div>
         </div>
-        {!persona.is_free && (
+        {!persona.is_free && !isOwned && (
           <div className="font-serif text-[16px] text-ink-primary">
             {formatPrice(persona.price_pln_grosze)}
           </div>

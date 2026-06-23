@@ -11,38 +11,8 @@ import { Toggle } from '../ui/Toggle'
 import { MessageSheet } from './MessageSheet'
 import { useSettings, type Currency, type ReminderDays } from '../../store/settings'
 import { useOnboarding } from '../../store/onboarding'
-import { usePersonas, type PersonaPublic } from '../../store/personas'
-
-/**
- * Awatar aktywnej persony w sekcji "AI Doradca" w Ustawieniach.
- * Subskrypcik ma legacy obrazek 3D-głowy; pozostałe próbują /persona-avatar-{id}.png,
- * z fallbackiem na emoji z DB na tle koloru akcentu (tak samo jak WelcomeIntro).
- */
-function PersonaAvatar({ persona }: { persona: PersonaPublic | undefined }) {
-  const [imgFailed, setImgFailed] = useState(false)
-  const id = persona?.id ?? 'subskrypcik'
-  const src = id === 'subskrypcik' ? '/subskrypcik-avatar.png' : `/persona-avatar-${id}.png`
-  const accent = persona?.accent_color ?? '#1F3D33'
-  const emoji = persona?.avatar_emoji ?? '💸'
-
-  return (
-    <div
-      className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-full"
-      style={{ backgroundColor: accent }}
-    >
-      {!imgFailed ? (
-        <img
-          src={src}
-          alt={persona?.name ?? 'Subskrypcik'}
-          className="h-full w-full object-cover"
-          onError={() => setImgFailed(true)}
-        />
-      ) : (
-        <span className="text-[18px] leading-none">{emoji}</span>
-      )}
-    </div>
-  )
-}
+import { usePersonas } from '../../store/personas'
+import { PersonaAvatar } from '../personas/PersonaAvatar'
 
 interface SettingsSheetProps {
   open: boolean
@@ -279,7 +249,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                 <SectionLabel>AI Doradca</SectionLabel>
                 <div className="flex flex-col overflow-hidden rounded-lg border border-hairline bg-bg-card">
                   <div className="flex items-center gap-3 border-b border-hairline px-5 py-4">
-                    <PersonaAvatar persona={activePersona} />
+                    <PersonaAvatar persona={activePersona} size={36} />
                     <div className="flex-1">
                       <div className="text-[14px] text-ink-primary">
                         {activePersona?.name ?? 'Subskrypcik'}
