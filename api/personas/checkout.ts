@@ -61,7 +61,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const email = userData?.user?.email
 
   const url = new URL(persona.stripe_payment_link)
-  url.searchParams.set('client_reference_id', userId)
+  // client_reference_id niesie OBA identyfikatory rozdzielone "__". Stripe Dashboard
+  // ukrył pole metadata w nowym UI, więc nie polegamy na nim — webhook parsuje
+  // userId i personaId wprost z client_reference_id (200-char limit, alfanum + separatory).
+  url.searchParams.set('client_reference_id', `${userId}__${persona.id}`)
   if (email) url.searchParams.set('prefilled_email', email)
 
   res.status(200).json({ url: url.toString() })

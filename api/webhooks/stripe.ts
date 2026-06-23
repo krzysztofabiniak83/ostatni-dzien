@@ -75,15 +75,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const session = event.data.object as Stripe.Checkout.Session
-  const userId = session.client_reference_id
-  const personaId = session.metadata?.persona_id
   const sessionId = session.id
+
+  // Identyfikacja: parsujemy client_reference_id w formacie "userId__personaId"
+  // (ustawiane przez /api/personas/checkout). Fallback do session.metadata.persona_id
+  // dla starszych Payment Linków które miały metadata.
+  let userId: string | null = null
+  let personaId: string | null = null
+  const ref = session.client_reference_id || ''
+  if (ref.includes('__')) {
+    const [u, p] = ref.split('__')
+    userId = u || null
+    personaId = p || null
+  } else if (ref) {
+    userId = ref
+    personaId = session.metadata?.persona_id || null
+  }
 
   if (!userId || !personaId) {
     console.error(
-      `[stripe-webhook] missing identifiers: userId=${userId} personaId=${personaId} session=${sessionId}`,
+      `[stripe-webhook] missing identifiers: userId=${userId} personaId=${personaId} session=${sessionId} ref=${ref}`,
     )
-    // 200 — nie ma sensu retry'ować, dane już są w Stripe.
     res.status(200).json({ received: true, skipped: 'missing_identifiers' })
     return
   }
