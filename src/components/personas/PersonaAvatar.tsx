@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react'
 import type { PersonaPublic } from '../../store/personas'
 
 /**
- * Mały okrągły awatar persony używany w listach (dropdown, karty sklepu, ustawienia).
+ * Mały/średni okrągły awatar persony używany w listach (dropdown, karty sklepu,
+ * ustawienia). Spójny look niezależnie od miejsca i rozmiaru.
  *
  * Reguły renderu:
  * 1. Subskrypcik ma legacy ścieżkę `/subskrypcik-avatar.png` (zdjęcie 3D-głowy
- *    z `public/`).
- * 2. Pozostałe persony próbują `/persona-avatar-{id}.png`. Jak nie ma pliku,
- *    `onError` przełącza się na fallback.
- * 3. Fallback: `avatar_emoji` z DB na pełnym tle `accent_color` — żeby był
- *    czytelny nawet bez podstawionego renderu 3D.
+ *    z `public/`); pozostałe próbują `/persona-avatar-{id}.png`.
+ * 2. Brak pliku → `onError` → fallback do emoji z DB.
+ * 3. Tło ZAWSZE neutralne (`bg-bg-subtle`) — bez krzykliwych granatów/terakot
+ *    pod emoji. Zdjęcie 3D-głowy ma własne ciemne tło w pliku, więc i tak
+ *    wygląda dobrze. Branding kolorem akcentu zostaje tylko w WelcomeIntro
+ *    (big hero avatar).
  *
- * Reset stanu przy zmianie persony (przez `useEffect`) gwarantuje że nowy
- * obrazek dostanie szansę się załadować po podmianie aktywnego doradcy.
+ * Reset stanu przy zmianie persony gwarantuje że nowy obrazek dostanie szansę
+ * się załadować po podmianie aktywnego doradcy.
  */
 export function PersonaAvatar({
   persona,
@@ -24,7 +26,6 @@ export function PersonaAvatar({
 }) {
   const id = persona?.id ?? 'subskrypcik'
   const src = id === 'subskrypcik' ? '/subskrypcik-avatar.png' : `/persona-avatar-${id}.png`
-  const accent = persona?.accent_color ?? '#1F3D33'
   const emoji = persona?.avatar_emoji ?? '💸'
   const name = persona?.name ?? 'Subskrypcik'
 
@@ -33,13 +34,13 @@ export function PersonaAvatar({
     setImgFailed(false)
   }, [id])
 
-  // Skalujemy emoji do ~55% wysokości awatara — wygląda spójnie w każdym rozmiarze.
+  // Emoji ~55% wysokości awatara — spójnie w każdym rozmiarze.
   const emojiSize = Math.round(size * 0.55)
 
   return (
     <div
-      className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full"
-      style={{ width: size, height: size, backgroundColor: accent }}
+      className="flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-bg-subtle"
+      style={{ width: size, height: size }}
     >
       {!imgFailed ? (
         <img
