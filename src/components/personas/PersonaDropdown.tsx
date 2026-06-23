@@ -125,25 +125,25 @@ interface RowProps {
 function PersonaRow({ persona, isOwned, isActive, isBuying, onActivate, onBuy }: RowProps) {
   const canActivate = isOwned && !isActive
 
+  // Cały wiersz klikalny gdy można aktywować — żeby klik w awatar (zdjęcie 3D
+  // Subskrypcika) albo tagline też przełączał personę. Pill "Kup" ma stopPropagation
+  // żeby klik w niego nie próbował zarazem aktywować nie-owned persony.
+  const Wrapper = canActivate ? 'button' : 'div'
+
   return (
     <li>
-      <div
+      <Wrapper
+        type={canActivate ? 'button' : undefined}
+        onClick={canActivate ? onActivate : undefined}
         className={clsx(
-          'flex items-center gap-3 px-3 py-2.5',
+          'flex w-full items-center gap-3 px-3 py-2.5 text-left',
           isActive && 'bg-accent-soft',
           !isOwned && 'opacity-60',
+          canActivate && 'cursor-pointer hover:bg-bg-subtle',
         )}
       >
         <PersonaAvatar persona={persona} size={36} />
-        <button
-          type="button"
-          disabled={!canActivate}
-          onClick={canActivate ? onActivate : undefined}
-          className={clsx(
-            'flex flex-1 flex-col items-start text-left',
-            canActivate && 'cursor-pointer',
-          )}
-        >
+        <div className="flex flex-1 flex-col items-start">
           <div className="flex items-center gap-1.5 font-sans text-[14px] font-medium text-ink-primary">
             {persona.name}
             {isActive && (
@@ -155,18 +155,21 @@ function PersonaRow({ persona, isOwned, isActive, isBuying, onActivate, onBuy }:
           <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-tertiary">
             {persona.tagline}
           </div>
-        </button>
+        </div>
         {!isOwned && (
           <button
             type="button"
-            onClick={onBuy}
+            onClick={(e) => {
+              e.stopPropagation()
+              onBuy()
+            }}
             disabled={isBuying}
             className="flex flex-shrink-0 items-center rounded-pill bg-alert px-3 py-1.5 font-sans text-[12px] font-medium text-white transition-all hover:brightness-95 disabled:opacity-60"
           >
             {isBuying ? 'Przekierowuję…' : `Kup · ${formatPrice(persona.price_pln_grosze)}`}
           </button>
         )}
-      </div>
+      </Wrapper>
     </li>
   )
 }
