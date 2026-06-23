@@ -178,13 +178,14 @@ export function WelcomeIntro() {
           </div>
         </div>
 
-        {/* Awatar aktywnej persony — PNG z fallbackiem do dużego emoji na tle akcentu. */}
+        {/* Awatar aktywnej persony — PNG z fallbackiem do dużego emoji.
+            Spójnie z PersonaAvatar (dropdown/Store/Settings): neutralne tło
+            bg-subtle, accent_color tylko jako delikatny outer-glow w cieniu. */}
         <div
-          className="relative z-10 flex items-center justify-center overflow-hidden rounded-full text-bg-base"
+          className="relative z-10 flex items-center justify-center overflow-hidden rounded-full bg-bg-subtle text-bg-base"
           style={{
             width: AVATAR_SIZE,
             height: AVATAR_SIZE,
-            background: personaAccent,
             boxShadow: `0 16px 40px -10px ${personaAccent}66, 0 0 0 4px rgba(245,243,238,0.9)`,
           }}
         >

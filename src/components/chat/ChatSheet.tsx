@@ -9,6 +9,7 @@ import { JournalView } from './JournalView'
 import { supabase } from '../../lib/supabase'
 import { useSubscriptions } from '../../store/subscriptions'
 import { PersonaDropdown } from '../personas/PersonaDropdown'
+import { usePersonas } from '../../store/personas'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -38,6 +39,7 @@ export function ChatSheet({
   initialPrompt?: string
 }) {
   const reduce = useReducedMotion()
+  const activePersonaId = usePersonas((s) => s.activePersonaId)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -74,6 +76,23 @@ export function ChatSheet({
     sessionStartRef.current = null
     abortRef.current?.abort()
   }, [open])
+
+  // Zmiana aktywnej persony = nowa rozmowa (inny doradca = inny kontekst).
+  // Domykamy starą sesję do dzienniczka i czyścimy okno czatu.
+  useEffect(() => {
+    if (!open) return
+    const captured = messagesRef.current
+    const startedAt = sessionStartRef.current
+    if (captured.length > 0 && startedAt) {
+      void finalizeConversation(captured, startedAt)
+    }
+    setMessages([])
+    setError(null)
+    sentInitialRef.current = false
+    sessionStartRef.current = new Date()
+    abortRef.current?.abort()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePersonaId])
 
   async function send(prompt: string) {
     const trimmed = prompt.trim()
