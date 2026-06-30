@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { isPatToken, lookupPat, signSupabaseJwt, touchPat } from './api-tokens.js'
 
 export type AuthedContext = {
   supabase: SupabaseClient
@@ -8,8 +9,10 @@ export type AuthedContext = {
 
 /**
  * Buduje klienta Supabase z podanym Bearer tokenem i waliduje go.
- * Zwraca AuthedContext lub typowany błąd — bez pisania do response,
- * żeby dało się reużyć z innych transportów (np. MCP).
+ * Obsługuje dwa formaty:
+ *  - krótkotrwały JWT sesji Supabase (klient web/mobile),
+ *  - Personal Access Token `od_pat_...` (długotrwały, hashowany w DB).
+ * Zwraca AuthedContext lub typowany błąd — bez pisania do response.
  */
 export async function authenticateToken(
   token: string | null,
@@ -26,6 +29,27 @@ export async function authenticateToken(
     return { ok: false, status: 401, error: 'unauthorized', message: 'Brak autoryzacji.' }
   }
 
+  // Ścieżka PAT: lookup po hashu → świeży krótki JWT podpisany Supabase JWT_SECRET → klient z RLS jak zwykle.
+  if (isPatToken(token)) {
+    const pat = await lookupPat(token)
+    if (!pat.ok) {
+      const status = pat.error === 'db_error' || pat.error === 'server_misconfigured' ? 500 : 401
+      return { ok: false, status, error: pat.error, message: pat.message }
+    }
+    const jwt = signSupabaseJwt(pat.userId)
+    if (!jwt) {
+      return { ok: false, status: 500, error: 'server_misconfigured', message: 'Brak SUPABASE_JWT_SECRET.' }
+    }
+    // Fire-and-forget: odśwież last_used_at.
+    void touchPat(pat.tokenId)
+    const supabase = createClient(supabaseUrl, supabaseAnon, {
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+    return { ok: true, ctx: { supabase, userId: pat.userId } }
+  }
+
+  // Ścieżka klasyczna: krótkotrwały JWT sesji Supabase.
   const supabase = createClient(supabaseUrl, supabaseAnon, {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false },

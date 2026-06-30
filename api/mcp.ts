@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { authenticateToken, type AuthedContext } from './_shared/auth.js'
 import { formatSubDate, sectionFor, urgencyFor } from './_shared/format.js'
 import { CATEGORY_IDS } from './_shared/categories.js'
+import { checkPerMinuteRate, PER_MINUTE_LIMIT } from './_shared/rate-limit.js'
 
 /**
  * MCP server (Streamable HTTP) — `/api/mcp`.
@@ -34,6 +35,12 @@ async function withAuthCtx(
 ): Promise<ToolResult> {
   const result = await authenticateToken(token ?? null)
   if (!result.ok) return fail(`${result.error}: ${result.message}`)
+  const perMin = checkPerMinuteRate(result.ctx.userId)
+  if (!perMin.ok) {
+    return fail(
+      `rate_limit_minute: przekroczony limit ${PER_MINUTE_LIMIT} wywołań/min. Spróbuj za ${Math.ceil(perMin.resetMs / 1000)}s.`,
+    )
+  }
   return fn(result.ctx)
 }
 

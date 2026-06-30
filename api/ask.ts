@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import OpenAI from 'openai'
 import { getUserFromRequest } from './_shared/auth.js'
-import { checkAndIncrementDailyUsage } from './_shared/rate-limit.js'
+import { checkAndIncrementDailyUsage, checkPerMinuteRate, PER_MINUTE_LIMIT } from './_shared/rate-limit.js'
 import { getActiveSystemPrompt } from './_shared/personas.js'
 
 const MODEL = process.env.SUBSKRYPCIK_MODEL || 'gpt-4o-mini'
@@ -34,6 +34,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const question = (body?.question ?? '').trim()
   if (!question) {
     res.status(400).json({ error: 'invalid_body', message: 'Wymagane: question (string, niepuste).' })
+    return
+  }
+
+  const perMin = checkPerMinuteRate(userId)
+  if (!perMin.ok) {
+    const retryAfter = Math.ceil(perMin.resetMs / 1000)
+    res.setHeader('Retry-After', String(retryAfter))
+    res.status(429).json({
+      error: 'rate_limit_minute',
+      message: `Za dużo zapytań — limit ${PER_MINUTE_LIMIT}/min. Spróbuj za ${retryAfter}s.`,
+    })
     return
   }
 
