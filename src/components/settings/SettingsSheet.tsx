@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
-import { LifeBuoy, LogOut, Mail, MessageSquare, ShoppingBag } from 'lucide-react'
+import { KeyRound, LifeBuoy, LogOut, Mail, MessageSquare, ShoppingBag } from 'lucide-react'
 import { signOut } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import { Toggle } from '../ui/Toggle'
 import { MessageSheet } from './MessageSheet'
+import { ApiTokensSheet } from './ApiTokensSheet'
 import { useSettings, type Currency, type ReminderDays } from '../../store/settings'
 import { useOnboarding } from '../../store/onboarding'
 import { usePersonas } from '../../store/personas'
@@ -132,6 +133,7 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
   const activePersonaId = usePersonas((s) => s.activePersonaId)
   const activePersona = personas.find((p) => p.id === activePersonaId)
   const [messageOpen, setMessageOpen] = useState(false)
+  const [tokensOpen, setTokensOpen] = useState(false)
   const [token, setToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -330,7 +332,14 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
                   <div className="border-b border-hairline">
                     <NavRow label="Dokumentacja API" href="/docs" />
                   </div>
-                  <NavRow label="Mój token API (do testów)" onClick={handleShowToken} />
+                  <div className="border-b border-hairline">
+                    <NavRow
+                      label="Tokeny API"
+                      onClick={() => setTokensOpen(true)}
+                      icon={KeyRound}
+                    />
+                  </div>
+                  <NavRow label="Token sesji (do szybkich testów)" onClick={handleShowToken} />
                 </div>
               </div>
 
@@ -366,6 +375,8 @@ export function SettingsSheet({ open, onClose }: SettingsSheetProps) {
         to={FEEDBACK_EMAIL}
         fallbackTo={FEEDBACK_EMAIL}
       />
+
+      <ApiTokensSheet open={tokensOpen} onClose={() => setTokensOpen(false)} />
 
       {token && (
         <motion.div
